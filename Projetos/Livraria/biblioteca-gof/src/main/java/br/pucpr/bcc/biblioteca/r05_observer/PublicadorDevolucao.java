@@ -15,7 +15,7 @@ public class PublicadorDevolucao {
             try {
                 ouvinte.aoDevolver(evento);
             } catch (RuntimeException ex) {
-                // Isola falhas de um ouvinte para não afetar os demais nem desfazer a devolução
+                System.err.println("Falha no ouvinte " + ouvinte.getClass().getSimpleName() + ": " + ex.getMessage());
             }
         }
     }

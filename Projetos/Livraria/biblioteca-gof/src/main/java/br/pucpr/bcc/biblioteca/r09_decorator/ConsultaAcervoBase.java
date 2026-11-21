@@ -18,7 +18,7 @@ public class ConsultaAcervoBase implements ConsultaAcervoService {
     @Override
     public boolean podeReservar(int idLivro) {
         return repoLivro.buscarPorId(idLivro)
-                .map(l -> "LIVRE".equalsIgnoreCase(l.getEstadoNome()))
+                .map(l -> !l.isExcluido() && "LIVRE".equalsIgnoreCase(l.getEstadoNome()))
                 .orElse(false);
     }
 }

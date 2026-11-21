@@ -17,11 +17,11 @@ public class CadastroPessoaTemplate extends RotinaCadastroTemplate<Pessoa> {
         this.cpf = cpf;
     }
 
-    @Override protected Optional<Pessoa> buscarExistente() { return repo.buscarPessoaPorCpf(cpf); }
+    @Override protected Optional<Pessoa> buscarExistente() { return cpf == null ? Optional.empty() : repo.buscarPessoaPorCpf(cpf); }
 
     @Override
     protected void validar() {
-        if (cpf == null || cpf.isBlank() || nome == null || nome.isBlank()) {
+        if (cpf == null || cpf.isBlank() || nome == null || nome.isBlank() || sobrenome == null) {
             throw new IllegalArgumentException("Dados obrigatórios de Pessoa ausentes");
         }
     }

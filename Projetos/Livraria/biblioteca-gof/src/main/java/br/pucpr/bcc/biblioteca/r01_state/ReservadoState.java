@@ -8,6 +8,8 @@ public class ReservadoState extends AbstractEstadoLivro {
 
     @Override
     public boolean emprestar(Livro livro, int idEstudante, Emprestimo emprestimo) {
+        if (emprestimo == null || emprestimo.isDevolvido() || emprestimo.getIdLivro() != livro.getIdLivro()
+                || emprestimo.getIdEstudante() != idEstudante) return false;
         if (livro.getIdReservadoParaEstudante() == null || livro.getIdReservadoParaEstudante() != idEstudante) {
             return false;
         }

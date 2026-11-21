@@ -7,6 +7,7 @@ public class LivreState extends AbstractEstadoLivro {
 
     @Override
     public boolean reservar(Livro livro, int idEstudante) {
+        if (livro.isExcluido() || idEstudante <= 0) return false;
         livro.setIdReservadoParaEstudante(idEstudante);
         livro.definirEstadoInterno(new ReservadoState());
         return true;
