@@ -23,4 +23,4 @@
   - Ajuste na composição de `MedicaoConsultaDecorator`, `CacheMetadadosDecorator` e `ConsultaAcervoBase` para medir consultas e manter a consulta do estado atual separada na reserva.
   - Validações de hierarquia, pai único, ciclos, movimentação de itens e registro de folhas em `GrupoAcervoComposite` e `ItemLivroComposite`.
 - **Interface , Testes e Documentação:**
-  - Atualização do fluxo de demonstração (`demo`) e do menu interativo em `ConsoleApp`, expansão da suíte de testes JUnit 5 (incluindo `PersistenciaJdbcTest` e `MysqlIntegracaoIT`) e atualização de `README.md`, `REGISTRO_LLM.md` e modelos em `docs/uml/`.
+  - Atualização do fluxo de demonstração (`demo`) e do menu interativo em `ConsoleApp`, expansão da suíte de testes JUnit 5 (incluindo `PersistenciaJdbcTest` e `MysqlIntegracaoIT`) e atualização de `README.md`e `REGISTRO_LLM.md`.
