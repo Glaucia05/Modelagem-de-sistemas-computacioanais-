@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RepositorioMovimentacao {
+    default UnidadeTrabalho unidadeTrabalho() { return null; }
     void salvarReserva(Reserva reserva);
     Optional<Reserva> buscarReservaAtiva(int idLivro, int idEstudante);
     void removerReserva(int idLivro, int idEstudante);

@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS reservas (
     id_estudante INT NOT NULL,
     data_reserva DATE NOT NULL,
     ativa BOOLEAN NOT NULL DEFAULT TRUE,
-    PRIMARY KEY (id_livro, id_estudante)
+    PRIMARY KEY (id_livro, id_estudante),
+    CONSTRAINT fk_reserva_livro FOREIGN KEY (id_livro) REFERENCES livros(id_livro),
+    CONSTRAINT fk_reserva_estudante FOREIGN KEY (id_estudante) REFERENCES estudantes(id_estudante)
 );
 
 CREATE TABLE IF NOT EXISTS emprestimos (
@@ -44,7 +46,9 @@ CREATE TABLE IF NOT EXISTS emprestimos (
     data_inicio DATE NOT NULL,
     data_vencimento DATE NOT NULL,
     estado VARCHAR(30) NOT NULL,
-    devolvido BOOLEAN NOT NULL DEFAULT FALSE
+    devolvido BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_emprestimo_livro FOREIGN KEY (id_livro) REFERENCES livros(id_livro),
+    CONSTRAINT fk_emprestimo_estudante FOREIGN KEY (id_estudante) REFERENCES estudantes(id_estudante)
 );
 
 CREATE TABLE IF NOT EXISTS devolucoes (
@@ -52,7 +56,9 @@ CREATE TABLE IF NOT EXISTS devolucoes (
     id_livro INT NOT NULL,
     id_estudante INT NOT NULL,
     data_devolucao DATE NOT NULL,
-    data_vencimento DATE NOT NULL
+    data_vencimento DATE NOT NULL,
+    CONSTRAINT fk_devolucao_livro FOREIGN KEY (id_livro) REFERENCES livros(id_livro),
+    CONSTRAINT fk_devolucao_estudante FOREIGN KEY (id_estudante) REFERENCES estudantes(id_estudante)
 );
 
 CREATE TABLE IF NOT EXISTS boletos_multa (
@@ -61,5 +67,7 @@ CREATE TABLE IF NOT EXISTS boletos_multa (
     id_estudante INT NOT NULL,
     valor DECIMAL(10, 2) NOT NULL,
     politica_aplicada VARCHAR(60) NOT NULL,
-    situacao VARCHAR(30) NOT NULL
+    situacao VARCHAR(30) NOT NULL,
+    CONSTRAINT fk_boleto_livro FOREIGN KEY (id_livro) REFERENCES livros(id_livro),
+    CONSTRAINT fk_boleto_estudante FOREIGN KEY (id_estudante) REFERENCES estudantes(id_estudante)
 );
