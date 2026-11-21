@@ -4,6 +4,7 @@ import br.pucpr.bcc.biblioteca.dominio.*;
 import java.util.Optional;
 
 public interface RepositorioRelacionamento {
+    default UnidadeTrabalho unidadeTrabalho() { return null; }
     void salvarPessoa(Pessoa pessoa);
     Optional<Pessoa> buscarPessoaPorCpf(String cpf);
     void removerPessoa(String cpf);

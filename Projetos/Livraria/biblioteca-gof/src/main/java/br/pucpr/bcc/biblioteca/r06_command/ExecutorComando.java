@@ -1,25 +1,22 @@
 package br.pucpr.bcc.biblioteca.r06_command;
 
 import br.pucpr.bcc.biblioteca.r04_facade.ComprovanteOperacao;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Objects;
 
 public class ExecutorComando {
-    private final Set<String> idsExecutados = ConcurrentHashMap.newKeySet();
-    private final Map<String, ComprovanteOperacao> resultadosPorId = new ConcurrentHashMap<>();
+    private final Map<String, ComprovanteOperacao> resultadosPorId = new HashMap<>();
 
-    public ComprovanteOperacao executar(ComandoCirculacao comando) {
-        if (idsExecutados.add(comando.idComando())) {
-            ComprovanteOperacao resultado = comando.executar();
-            resultadosPorId.put(comando.idComando(), resultado);
-            return resultado;
+    // A execução e o registro formam uma única seção crítica. A repetição aguarda
+    // o resultado original; exceções não deixam o identificador preso no executor.
+    public synchronized ComprovanteOperacao executar(ComandoCirculacao comando) {
+        Objects.requireNonNull(comando);
+        if (comando.idComando() == null || comando.idComando().isBlank()
+                || comando.autor() == null || comando.autor().isBlank() || comando.criadoEm() == null) {
+            throw new IllegalArgumentException("Comando exige identificador, autor e instante");
         }
-        ComprovanteOperacao anterior = resultadosPorId.get(comando.idComando());
-        return anterior != null
-                ? new ComprovanteOperacao(anterior.sucesso(), anterior.operacao(), anterior.idLivro(),
-                        anterior.idEstudante(), anterior.estadoLivroResultante(), anterior.dataVencimento(),
-                        "Comando duplicado ignorado: " + comando.idComando())
-                : new ComprovanteOperacao(false, "DUPLICADO", 0, 0, null, null, "Comando já executado");
+        return resultadosPorId.computeIfAbsent(comando.idComando(),
+                id -> Objects.requireNonNull(comando.executar()));
     }
 }

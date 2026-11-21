@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class BancoBAdapter implements CobrancaInstitucional {
     private final BancoBSimulado bancoB;
+    private final java.util.Map<String, BigDecimal> valoresEmitidos = new ConcurrentHashMap<>();
     private final Set<String> quitadas = ConcurrentHashMap.newKeySet();
 
     public BancoBAdapter(BancoBSimulado bancoB) {
@@ -17,7 +18,13 @@ public class BancoBAdapter implements CobrancaInstitucional {
     @Override
     public String registrarCobranca(String idRef, String documentoPagador, BigDecimal valorReais) {
         double valor = valorReais.setScale(2, RoundingMode.HALF_UP).doubleValue();
-        return bancoB.gerarCobrancaDecimal(documentoPagador, valor);
+        String digitos = documentoPagador.replaceAll("\\D", "");
+        if (digitos.length() != 11 || !Double.isFinite(valor) || valor <= 0) throw new IllegalArgumentException("Valor ou CPF inválido");
+        String formatado = digitos.substring(0, 3) + "." + digitos.substring(3, 6) + "."
+                + digitos.substring(6, 9) + "-" + digitos.substring(9);
+        String id = bancoB.gerarCobrancaDecimal(formatado, valor);
+        valoresEmitidos.put(id, valorReais.setScale(2, RoundingMode.HALF_UP));
+        return id;
     }
 
     @Override
@@ -25,7 +32,11 @@ public class BancoBAdapter implements CobrancaInstitucional {
         if (!(notificacaoBruta instanceof BancoBSimulado.PayloadBancoB p)) {
             return Optional.empty();
         }
+        if (p.codigoExterno() == null) return Optional.empty();
+        BigDecimal esperado = valoresEmitidos.get(p.codigoExterno());
+        if (esperado == null || quitadas.contains(p.codigoExterno()) || !Double.isFinite(p.montanteReais())) return Optional.empty();
         if ("PAGO".equalsIgnoreCase(p.estadoTexto())) {
+            if (esperado.compareTo(BigDecimal.valueOf(p.montanteReais()).setScale(2, RoundingMode.HALF_UP)) != 0) return Optional.empty();
             boolean primeiraVez = quitadas.add(p.codigoExterno());
             if (!primeiraVez) {
                 return Optional.empty();

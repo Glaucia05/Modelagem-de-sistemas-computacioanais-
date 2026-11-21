@@ -35,6 +35,15 @@ public class TratadorDeDevolucao implements iDevolucao {
         this.cobranca = cobranca;
     }
 
+    public void definirPoliticaMulta(String nome) {
+        configuracaoMulta.definirPolitica(switch (nome.toLowerCase(java.util.Locale.ROOT)) {
+            case "original" -> new br.pucpr.bcc.biblioteca.r02_strategy.MultaOriginalStrategy();
+            case "teto" -> new br.pucpr.bcc.biblioteca.r02_strategy.MultaTetoVinteStrategy();
+            case "tolerancia" -> new br.pucpr.bcc.biblioteca.r02_strategy.MultaToleranciaDoisDiasStrategy();
+            default -> throw new IllegalArgumentException("Política deve ser original, teto ou tolerancia");
+        });
+    }
+
     @Override
     public ComprovanteOperacao registrarDevolucao(int idLivro, int idEstudante, LocalDate dataDevolucao) {
         return facade.registrarDevolucao(idLivro, idEstudante, dataDevolucao);
@@ -46,19 +55,20 @@ public class TratadorDeDevolucao implements iDevolucao {
         if (optDev.isEmpty()) return Optional.empty();
 
         Devolucao dev = optDev.get();
-        BigDecimal valor = configuracaoMulta.getPoliticaVigente().calcular(dev.getDataVencimento(), dev.getDataDevolucao());
+        var politica = configuracaoMulta.getPoliticaVigente();
+        BigDecimal valor = politica.calcular(dev.getDataVencimento(), dev.getDataDevolucao());
         if (valor.compareTo(BigDecimal.ZERO) <= 0) {
             return Optional.empty();
         }
 
-        String cpf = repoRel.buscarEstudantePorId(idEstudante).map(e -> e.cpf()).orElse("00000000000");
+        String cpf = repoRel.buscarEstudantePorId(idEstudante).map(e -> e.cpf()).orElseThrow(() -> new IllegalStateException("Estudante não encontrado para emissão"));
         String idCobranca = cobranca.registrarCobranca("DEV-" + idLivro + "-" + idEstudante, cpf, valor);
         BoletoMulta boleto = new BoletoMulta(
                 idCobranca,
                 idLivro,
                 idEstudante,
                 valor,
-                configuracaoMulta.getPoliticaVigente().nomePolitica(),
+                politica.nomePolitica(),
                 "EMITIDO"
         );
         repoMov.salvarBoleto(boleto);

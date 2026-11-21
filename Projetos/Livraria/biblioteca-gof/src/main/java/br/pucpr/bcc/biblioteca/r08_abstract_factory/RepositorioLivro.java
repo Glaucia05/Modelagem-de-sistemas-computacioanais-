@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RepositorioLivro {
+    default UnidadeTrabalho unidadeTrabalho() { return null; }
     void salvar(Livro livro);
     Optional<Livro> buscarPorId(int idLivro);
     List<Livro> listarTodos();

@@ -1,0 +1,5 @@
+/target/
+*.asta.bak
+*.asta.lock
+.env
+.env.*

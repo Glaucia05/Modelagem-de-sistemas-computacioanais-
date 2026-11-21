@@ -3,7 +3,7 @@ package br.pucpr.bcc.biblioteca.r02_strategy;
 import java.util.Objects;
 
 public class ConfiguracaoMulta {
-    private PoliticaMulta politicaVigente;
+    private volatile PoliticaMulta politicaVigente;
 
     public ConfiguracaoMulta(PoliticaMulta inicial) {
         this.politicaVigente = Objects.requireNonNull(inicial);

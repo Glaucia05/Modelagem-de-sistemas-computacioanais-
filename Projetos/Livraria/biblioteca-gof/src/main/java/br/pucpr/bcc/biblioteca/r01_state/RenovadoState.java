@@ -8,7 +8,7 @@ public class RenovadoState extends AbstractEstadoLivro {
 
     @Override
     public boolean renovar(Livro livro, Emprestimo emprestimo) {
-        if (emprestimo == null || livro.getNumRenovacoes() >= 2) {
+        if (emprestimo == null || emprestimo.isDevolvido() || emprestimo.getIdLivro() != livro.getIdLivro() || livro.getNumRenovacoes() >= 2) {
             return false;
         }
         emprestimo.estenderVencimento(30);
@@ -19,6 +19,7 @@ public class RenovadoState extends AbstractEstadoLivro {
 
     @Override
     public boolean devolver(Livro livro, Emprestimo emprestimo) {
+        if (emprestimo == null || emprestimo.isDevolvido() || emprestimo.getIdLivro() != livro.getIdLivro()) return false;
         livro.definirEstadoInterno(new DevolvidoState());
         return true;
     }

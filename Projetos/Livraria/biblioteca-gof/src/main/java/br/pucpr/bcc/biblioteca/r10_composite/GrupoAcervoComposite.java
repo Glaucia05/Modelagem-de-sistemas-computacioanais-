@@ -3,9 +3,11 @@ package br.pucpr.bcc.biblioteca.r10_composite;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Objects;
 
 public class GrupoAcervoComposite implements ElementoAcervo {
     private final String nome;
+    private GrupoAcervoComposite pai;
     private final List<ElementoAcervo> filhos = new ArrayList<>();
     private final Set<Integer> idsRegistradosGlobalmente;
 
@@ -18,25 +20,44 @@ public class GrupoAcervoComposite implements ElementoAcervo {
     public String nome() { return nome; }
 
     public void adicionar(ElementoAcervo elemento) {
-        if (elemento == this) {
-            throw new IllegalArgumentException("Ciclo proibido: grupo não pode conter a si mesmo");
-        }
-        if (elemento instanceof GrupoAcervoComposite outroGrupo && outroGrupo.contemGrupo(this)) {
+        Objects.requireNonNull(elemento);
+        if (elemento == this || elemento instanceof GrupoAcervoComposite g && g.contemGrupo(this)) {
             throw new IllegalArgumentException("Ciclo proibido na hierarquia de grupos");
         }
-        for (int id : elemento.listarIdsLivros()) {
-            if (!idsRegistradosGlobalmente.add(id)) {
-                throw new IllegalArgumentException("Livro já pertence a outro grupo do acervo: " + id);
+        if (elemento instanceof GrupoAcervoComposite grupo) {
+            if (grupo.pai != null) throw new IllegalArgumentException("Grupo já possui pai");
+            if (grupo.idsRegistradosGlobalmente != idsRegistradosGlobalmente) {
+                throw new IllegalArgumentException("Grupos devem compartilhar o registro do acervo");
             }
+            // As folhas já foram registradas ao entrar na seção. Anexar a seção
+            // não representa uma segunda inclusão de seus livros.
+            grupo.pai = this;
+        } else if (elemento instanceof ItemLivroComposite item) {
+            if (!idsRegistradosGlobalmente.add(item.idLivro())) {
+                throw new IllegalArgumentException("Livro já pertence a outro grupo: " + item.idLivro());
+            }
+        } else {
+            throw new IllegalArgumentException("Elemento de acervo não suportado");
         }
         filhos.add(elemento);
     }
 
     public boolean moverItemPara(ItemLivroComposite item, GrupoAcervoComposite destino) {
-        boolean removido = filhos.removeIf(e -> e instanceof ItemLivroComposite it && it.idLivro() == item.idLivro());
-        if (!removido) return false;
-        destino.filhos.add(item);
-        return true;
+        Objects.requireNonNull(item);
+        Objects.requireNonNull(destino);
+        if (destino.idsRegistradosGlobalmente != idsRegistradosGlobalmente) {
+            throw new IllegalArgumentException("Transferência exige o mesmo acervo");
+        }
+        for (int i = 0; i < filhos.size(); i++) {
+            ElementoAcervo atual = filhos.get(i);
+            if (atual instanceof ItemLivroComposite folha && folha.idLivro() == item.idLivro()) {
+                if (destino == this) return true;
+                destino.filhos.add(atual);
+                filhos.remove(i);
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean contemGrupo(ElementoAcervo alvo) {
