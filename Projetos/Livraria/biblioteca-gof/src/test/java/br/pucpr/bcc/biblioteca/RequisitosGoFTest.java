@@ -201,18 +201,18 @@ class RequisitosGoFTest {
 
     @Test
     void R09_decoratorCacheMetadadosMedicaoEEstadoAtualNaReserva() {
-        MedicaoConsultaDecorator medicao = new MedicaoConsultaDecorator(new ConsultaAcervoBase(factory.repositorioLivro()));
-        CacheMetadadosDecorator cache = new CacheMetadadosDecorator(medicao);
+        CacheMetadadosDecorator cache = new CacheMetadadosDecorator(new ConsultaAcervoBase(factory.repositorioLivro()));
+        MedicaoConsultaDecorator medicao = new MedicaoConsultaDecorator(cache);
 
-        assertTrue(cache.consultarMetadados(1).isPresent());
-        assertTrue(cache.consultarMetadados(1).isPresent());
-        assertTrue(medicao.getTotalMedicoes() >= 2);
+        assertTrue(medicao.consultarMetadados(1).isPresent());
+        assertTrue(medicao.consultarMetadados(1).isPresent());
+        assertEquals(2, medicao.getTotalMedicoes());
 
         LocalDate hoje = LocalDate.of(2026, 11, 10);
         emprestimo.solicitarReserva("DEC-1", "user", 1, 101, hoje);
         emprestimo.efetivarEmprestimo(1, 101, hoje, 7);
 
-        assertFalse(cache.podeReservar(1));
+        assertFalse(medicao.podeReservar(1));
     }
 
     @Test
