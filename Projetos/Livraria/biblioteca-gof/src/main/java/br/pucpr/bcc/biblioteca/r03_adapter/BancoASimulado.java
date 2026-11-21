@@ -5,10 +5,10 @@ import java.util.Map;
 
 public class BancoASimulado {
     public record NotificacaoBancoA(String txId, long centavos, String statusCode) {}
-    private final Map<String, Long> cobrancasCentavos = new HashMap<>();
+    private final Map<String, Long> cobrancasCentavos = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public String criarBoletoCentavos(String docNumerico, long valorCentavos) {
-        String id = "BA-" + (cobrancasCentavos.size() + 1);
+    public synchronized String criarBoletoCentavos(String docNumerico, long valorCentavos) {
+        String id = "BA-" + java.util.UUID.randomUUID();
         cobrancasCentavos.put(id, valorCentavos);
         return id;
     }
