@@ -26,7 +26,7 @@ O Java mostrado pelo Maven deve ser 17 ou superior. Configure `JAVA_HOME` para a
 2. Abra como projeto Maven e aguarde a resolução das dependências.
 3. Configure um Project SDK Java 17+ e o mesmo JDK para o Maven Runner.
 4. No terminal integrado, confira se está na pasta que contém esse `pom.xml`.
-5. Para executar pela IDE, abra `src/main/java/br/pucpr/bcc/biblioteca/ui/ConsoleApp.java` e execute `main`. Nas opções de execução, informe `demo` como argumento para a demonstração automática, ou `menu memoria B` para menu com banco B simulado.
+5. Para executar pela IDE, abra `src/main/java/br/pucpr/bcc/biblioteca/web/ConsoleApp.java` e execute `main`. Nas opções de execução, informe `demo` como argumento para a demonstração automática, ou `menu memoria B` para menu com banco B simulado.
 
 ## 3. Abrir no VS Code
 
@@ -213,4 +213,4 @@ Após efetivar o empréstimo, a reserva correspondente foi removida. Renovar atu
 | Texto acentuado aparece incorreto no terminal | Utilizar terminal UTF-8; no Windows, testar `chcp 65001` antes da execução |
 | Mensagens de falha SMTP/rollback durante testes | São falhas injetadas pelos testes; confira o resumo JUnit e `BUILD SUCCESS` |
 
-Os arquivos `.asta` e seus PDFs ficam em `docs/uml/`. Consulte o README desse diretório para distinguir o original preservado da revisão da implementação. Os resultados finais e limites estão no README principal.
+Os modelos da equipe ficam em `docs/modelagem/` (PDFs) e `docs/uml/originais/` (Astah). A correspondência entre os nomes do enunciado e os nomes das modelagens está em `docs/CORRESPONDENCIA_NOMES.md`. Os resultados finais e limites estão no README principal.

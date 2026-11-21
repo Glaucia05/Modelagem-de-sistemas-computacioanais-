@@ -1,16 +1,17 @@
 package br.pucpr.bcc.biblioteca;
 
+import br.pucpr.bcc.biblioteca.banco.*;
 import br.pucpr.bcc.biblioteca.dominio.*;
 import br.pucpr.bcc.biblioteca.interfaces.*;
-import br.pucpr.bcc.biblioteca.r02_strategy.*;
-import br.pucpr.bcc.biblioteca.r03_adapter.*;
-import br.pucpr.bcc.biblioteca.r04_facade.CirculacaoFacade;
-import br.pucpr.bcc.biblioteca.r04_facade.ComprovanteOperacao;
-import br.pucpr.bcc.biblioteca.r05_observer.*;
-import br.pucpr.bcc.biblioteca.r06_command.ExecutorComando;
-import br.pucpr.bcc.biblioteca.r08_abstract_factory.*;
-import br.pucpr.bcc.biblioteca.r09_decorator.*;
-import br.pucpr.bcc.biblioteca.r10_composite.*;
+import br.pucpr.bcc.biblioteca.financeiro.multa.*;
+import br.pucpr.bcc.biblioteca.financeiro.cobranca.*;
+import br.pucpr.bcc.biblioteca.circulacao.CirculacaoFacade;
+import br.pucpr.bcc.biblioteca.circulacao.ComprovanteOperacao;
+import br.pucpr.bcc.biblioteca.eventos.*;
+import br.pucpr.bcc.biblioteca.comandos.ExecutorComando;
+import br.pucpr.bcc.biblioteca.persistencia.*;
+import br.pucpr.bcc.biblioteca.consulta.*;
+import br.pucpr.bcc.biblioteca.acervo.*;
 import br.pucpr.bcc.biblioteca.tratadores.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,17 +46,17 @@ class RequisitosGoFTest {
         publicador = new PublicadorDevolucao();
         facade = new CirculacaoFacade(
                 factory.unidadeTrabalho(),
-                factory.repositorioLivro(),
-                factory.repositorioMovimentacao(),
-                factory.repositorioRelacionamento(),
+                factory.acervoDeLivros(),
+                factory.movimentacao(),
+                factory.grupos(),
                 publicador
         );
-        cadastro = new TratadorDeCadastro(factory.repositorioLivro(), factory.repositorioRelacionamento());
+        cadastro = new TratadorDeCadastro(factory.acervoDeLivros(), factory.grupos());
         emprestimo = new TratadorDeEmprestimo(facade, new ExecutorComando());
         devolucao = new TratadorDeDevolucao(
                 facade,
-                factory.repositorioMovimentacao(),
-                factory.repositorioRelacionamento(),
+                factory.movimentacao(),
+                factory.grupos(),
                 configMulta,
                 adapterA
         );
@@ -72,34 +73,34 @@ class RequisitosGoFTest {
         assertTrue(emprestimo.efetivarEmprestimo(1, 101, base, 7).sucesso());
 
         assertTrue(emprestimo.renovarEmprestimo("C2", "user", 1, 101).sucesso());
-        LocalDate vencApos1a = factory.repositorioMovimentacao().buscarEmprestimoAtivo(1, 101).orElseThrow().getDataVencimento();
+        LocalDate vencApos1a = factory.movimentacao().consultarEmprestimo(1, 101).orElseThrow().getDataVencimento();
         assertEquals(base.plusDays(37), vencApos1a);
 
         assertTrue(emprestimo.renovarEmprestimo("C3", "user", 1, 101).sucesso());
-        LocalDate vencApos2a = factory.repositorioMovimentacao().buscarEmprestimoAtivo(1, 101).orElseThrow().getDataVencimento();
+        LocalDate vencApos2a = factory.movimentacao().consultarEmprestimo(1, 101).orElseThrow().getDataVencimento();
         assertEquals(base.plusDays(67), vencApos2a);
 
         ComprovanteOperacao r3 = emprestimo.renovarEmprestimo("C4", "user", 1, 101);
         assertFalse(r3.sucesso());
-        assertEquals(vencApos2a, factory.repositorioMovimentacao().buscarEmprestimoAtivo(1, 101).orElseThrow().getDataVencimento());
+        assertEquals(vencApos2a, factory.movimentacao().consultarEmprestimo(1, 101).orElseThrow().getDataVencimento());
 
         assertTrue(devolucao.registrarDevolucao(1, 101, base.plusDays(70)).sucesso());
-        assertEquals("DEVOLVIDO", factory.repositorioLivro().buscarPorId(1).orElseThrow().getEstadoNome());
+        assertEquals("DEVOLVIDO", factory.acervoDeLivros().consultarLivro(1).orElseThrow().getEstadoNome());
         assertFalse(emprestimo.solicitarReserva("C5", "user", 1, 101, base.plusDays(71)).sucesso());
 
         // Inspeção danificado -> REPARANDO -> laudo irrecuperável -> INCINERADO
         assertTrue(devolucao.inspecionarLivro(1, false).sucesso());
-        assertEquals("REPARANDO", factory.repositorioLivro().buscarPorId(1).orElseThrow().getEstadoNome());
+        assertEquals("REPARANDO", factory.acervoDeLivros().consultarLivro(1).orElseThrow().getEstadoNome());
         assertTrue(devolucao.emitirLaudoIrrecuperavel(1).sucesso());
-        assertEquals("INCINERADO", factory.repositorioLivro().buscarPorId(1).orElseThrow().getEstadoNome());
+        assertEquals("INCINERADO", factory.acervoDeLivros().consultarLivro(1).orElseThrow().getEstadoNome());
     }
 
     @Test
     void R02_politicasMultaCincoDiasESemAtraso() {
         LocalDate venc = LocalDate.of(2026, 11, 10);
-        PoliticaMulta original = new MultaOriginalStrategy();
-        PoliticaMulta tolerancia = new MultaToleranciaDoisDiasStrategy();
-        PoliticaMulta teto = new MultaTetoVinteStrategy();
+        iMulta original = new MultaOriginalStrategy();
+        iMulta tolerancia = new MultaToleranciaDoisDiasStrategy();
+        iMulta teto = new MultaTetoVinteStrategy();
 
         assertEquals(new BigDecimal("5.00"), original.calcular(venc, venc.plusDays(5)));
         assertEquals(new BigDecimal("3.00"), tolerancia.calcular(venc, venc.plusDays(5)));
@@ -132,8 +133,8 @@ class RequisitosGoFTest {
         ComprovanteOperacao comp = facade.efetivarEmprestimo(1, 101, hoje, 14);
         assertTrue(comp.sucesso());
         assertEquals("EMPRESTADO", comp.estadoLivroResultante());
-        assertTrue(factory.repositorioMovimentacao().buscarReservaAtiva(1, 101).isEmpty());
-        assertTrue(factory.repositorioMovimentacao().buscarEmprestimoAtivo(1, 101).isPresent());
+        assertTrue(factory.movimentacao().consultarReserva(1, 101).isEmpty());
+        assertTrue(factory.movimentacao().consultarEmprestimo(1, 101).isPresent());
     }
 
     @Test
@@ -155,7 +156,7 @@ class RequisitosGoFTest {
 
         ComprovanteOperacao res = devolucao.registrarDevolucao(1, 101, LocalDate.of(2026, 11, 9));
         assertTrue(res.sucesso());
-        assertEquals("DEVOLVIDO", factory.repositorioLivro().buscarPorId(1).orElseThrow().getEstadoNome());
+        assertEquals("DEVOLVIDO", factory.acervoDeLivros().consultarLivro(1).orElseThrow().getEstadoNome());
         assertEquals(1, inspecao.getFilaInspecaoLivros().size());
         assertEquals(1, multa.getDevolucoesComAtraso().size());
         assertEquals(1, indicadores.getTotalDevolucoes());
@@ -171,9 +172,9 @@ class RequisitosGoFTest {
         emprestimo.renovarEmprestimo("REN-MESMO-ID", "user", 1, 101);
         emprestimo.renovarEmprestimo("REN-MESMO-ID", "user", 1, 101);
 
-        Emprestimo emp = factory.repositorioMovimentacao().buscarEmprestimoAtivo(1, 101).orElseThrow();
+        Emprestimo emp = factory.movimentacao().consultarEmprestimo(1, 101).orElseThrow();
         assertEquals(inicio.plusDays(40), emp.getDataVencimento());
-        assertEquals(1, factory.repositorioLivro().buscarPorId(1).orElseThrow().getNumRenovacoes());
+        assertEquals(1, factory.acervoDeLivros().consultarLivro(1).orElseThrow().getNumRenovacoes());
     }
 
     @Test
@@ -184,7 +185,7 @@ class RequisitosGoFTest {
 
         assertThrows(IllegalStateException.class,
                 () -> cadastro.inserirEstudante("99999999999", 202, "MAT-202"));
-        assertTrue(factory.repositorioRelacionamento().buscarEstudantePorId(202).isEmpty());
+        assertTrue(factory.grupos().consultarEstudante(202).isEmpty());
     }
 
     @Test
@@ -195,13 +196,13 @@ class RequisitosGoFTest {
         PersistenciaFactory mysql = ProvedorPersistencia.criarPorPerfil("prod");
         assertTrue(mysql instanceof MysqlPersistenciaFactory);
         MysqlPersistenciaFactory mf = (MysqlPersistenciaFactory) mysql;
-        assertTrue(((MysqlPersistenciaFactory.MysqlRepositorioLivro) mf.repositorioLivro()).usaMesmaTransacao(mf.unidadeTrabalho()));
-        assertTrue(((MysqlPersistenciaFactory.MysqlRepositorioMovimentacao) mf.repositorioMovimentacao()).usaMesmaTransacao(mf.unidadeTrabalho()));
+        assertTrue(((MysqlPersistenciaFactory.MysqlAcervoDeLivros) mf.acervoDeLivros()).usaMesmaTransacao(mf.unidadeTrabalho()));
+        assertTrue(((MysqlPersistenciaFactory.MysqlMovimentacao) mf.movimentacao()).usaMesmaTransacao(mf.unidadeTrabalho()));
     }
 
     @Test
     void R09_decoratorCacheMetadadosMedicaoEEstadoAtualNaReserva() {
-        CacheMetadadosDecorator cache = new CacheMetadadosDecorator(new ConsultaAcervoBase(factory.repositorioLivro()));
+        CacheMetadadosDecorator cache = new CacheMetadadosDecorator(new ConsultaAcervoBase(factory.acervoDeLivros()));
         MedicaoConsultaDecorator medicao = new MedicaoConsultaDecorator(cache);
 
         assertTrue(medicao.consultarMetadados(1).isPresent());
@@ -244,12 +245,12 @@ class RequisitosGoFTest {
 
         assertEquals(5, unidade.contarLivros());
 
-        Livro antes = factory.repositorioLivro().buscarPorId(2).orElseThrow();
+        Livro antes = factory.acervoDeLivros().consultarLivro(2).orElseThrow();
         String estadoAntes = antes.getEstadoNome();
         assertTrue(secaoA.moverItemPara(i2, secaoB));
         assertEquals(5, unidade.contarLivros());
         assertEquals(2, secaoA.contarLivros());
         assertEquals(3, secaoB.contarLivros());
-        assertEquals(estadoAntes, factory.repositorioLivro().buscarPorId(2).orElseThrow().getEstadoNome());
+        assertEquals(estadoAntes, factory.acervoDeLivros().consultarLivro(2).orElseThrow().getEstadoNome());
     }
 }

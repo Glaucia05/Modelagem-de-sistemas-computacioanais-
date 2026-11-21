@@ -52,3 +52,13 @@ Etapa de 21/11/2026. O nome de modelo acima registra a informação do usuário;
 - **Descartado:** reescrita, frameworks adicionais, outbox, transações distribuídas, banco de chaves duráveis e webhook financeiro real. Não são necessários aos cenários acadêmicos exigidos e ampliariam o escopo sem benefício demonstrado. Também foram descartados limpeza de dados, alteração do original Astah, redução de expectativas dos testes e alegação de nota 100 garantida.
 - **Limitações remanescentes:** idempotência do executor e deduplicação do adaptador locais à instância; emissão repetida não possui chave durável; falha entre banco simulado e gravação requer conciliação; cache sem TTL; carga/concorrência entre processos não homologadas.
 - **Git:** Codex preparou a branch solicitada e os commits lógicos em português, inspecionando diffs e exclusão de credenciais/temporários. Publicação autorizada apenas nessa branch e PR para revisão, sem merge, force push, tags ou releases. O resultado efetivo da publicação e os hashes não constam neste repositório; foram apresentados apenas na resposta da ferramenta.
+
+
+## Alinhamento dos nomes com as modelagens da equipe
+
+- **Ferramenta:** Claude (Anthropic).
+- **Pedido da equipe:** usar no projeto os nomes das modelagens da equipe (`docs/modelagem/`), não os do enunciado; registrar a correspondência nos documentos; descartar os arquivos `.asta` e PDF gerados automaticamente, pois os modelos válidos partem das modelagens da equipe.
+- **Aceito e aplicado:** renomeação de pacotes (de `rNN_padrao` para pacotes por componente), `RepositorioLivro`→`AcervoDeLivros`, `RepositorioMovimentacao`→`Movimentacao`, `RepositorioRelacionamento`→`GruposDoSistema` (reunindo `GrupoDePessoas`, `GrupoDeAcademicos`, `GrupoDeColaboradores`), `PoliticaMulta`→`iMulta`, novas interfaces `iCobranca` e `iQuitacao`, e métodos de persistência para os nomes da classe de projeto. Tabelas em `docs/CORRESPONDENCIA_NOMES.md`.
+- **Removido:** `docs/uml/Biblioteca-GoF.asta`, `docs/uml/Diagramas-GoF.pdf` e `docs/uml/ferramentas/`. Mantido o `.asta` original da equipe.
+- **Verificação:** compilação do código principal e dos testes e execução dos 26 testes em memória (`RequisitosGoFTest` e `AuditoriaRegressaoTest`) com stubs mínimos de JUnit, sem Maven. `PersistenciaJdbcTest` (H2) e `MysqlIntegracaoIT` (MySQL) só foram compilados; a equipe deve rodar `mvn clean test` antes da entrega.
+- **Não alterado:** nomes dos métodos de `iEmprestimo`, `iDevolucao` e demais interfaces de componente (já coincidem com o diagrama de componentes), nomes das classes dos padrões e testes `R01`…`R10`.

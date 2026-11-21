@@ -1,11 +1,12 @@
 package br.pucpr.bcc.biblioteca;
 
+import br.pucpr.bcc.biblioteca.banco.*;
 import br.pucpr.bcc.biblioteca.dominio.*;
-import br.pucpr.bcc.biblioteca.r02_strategy.*;
-import br.pucpr.bcc.biblioteca.r03_adapter.*;
-import br.pucpr.bcc.biblioteca.r04_facade.*;
-import br.pucpr.bcc.biblioteca.r05_observer.*;
-import br.pucpr.bcc.biblioteca.r08_abstract_factory.*;
+import br.pucpr.bcc.biblioteca.financeiro.multa.*;
+import br.pucpr.bcc.biblioteca.financeiro.cobranca.*;
+import br.pucpr.bcc.biblioteca.circulacao.*;
+import br.pucpr.bcc.biblioteca.eventos.*;
+import br.pucpr.bcc.biblioteca.persistencia.*;
 import br.pucpr.bcc.biblioteca.tratadores.*;
 import org.junit.jupiter.api.Test;
 import java.nio.file.*;
@@ -36,57 +37,57 @@ class MysqlIntegracaoIT {
                     if (sql.startsWith("CREATE TABLE")) st.execute(sql);
                 }
             }
-            assertSame(uow, f.repositorioLivro().unidadeTrabalho());
-            assertSame(uow, f.repositorioMovimentacao().unidadeTrabalho());
-            assertSame(uow, f.repositorioRelacionamento().unidadeTrabalho());
+            assertSame(uow, f.acervoDeLivros().unidadeTrabalho());
+            assertSame(uow, f.movimentacao().unidadeTrabalho());
+            assertSame(uow, f.grupos().unidadeTrabalho());
             int id = ThreadLocalRandom.current().nextInt(100_000_000, 900_000_000);
-            for (int i = 0; i < 10; i++) assertTrue(f.repositorioLivro().buscarPorId(id+i).isEmpty());
+            for (int i = 0; i < 10; i++) assertTrue(f.acervoDeLivros().consultarLivro(id+i).isEmpty());
             String cpf = String.format("%011d", id);
-            assertTrue(f.repositorioRelacionamento().buscarPessoaPorCpf(cpf).isEmpty());
-            assertTrue(f.repositorioRelacionamento().buscarEstudantePorId(id).isEmpty());
-            var cadastro = new TratadorDeCadastro(f.repositorioLivro(), f.repositorioRelacionamento());
+            assertTrue(f.grupos().consultarPessoa(cpf).isEmpty());
+            assertTrue(f.grupos().consultarEstudante(id).isEmpty());
+            var cadastro = new TratadorDeCadastro(f.acervoDeLivros(), f.grupos());
             cadastro.inserirPessoa("Validação", "GoF", cpf);
             cadastro.inserirEstudante(cpf, id, "IT-"+id);
             cadastro.inserirLivro(id, "Validação JDBC");
             var publicador = new PublicadorDevolucao();
-            var facade = new CirculacaoFacade(uow, f.repositorioLivro(), f.repositorioMovimentacao(), f.repositorioRelacionamento(), publicador);
-            var devolucao = new TratadorDeDevolucao(facade, f.repositorioMovimentacao(), f.repositorioRelacionamento(),
+            var facade = new CirculacaoFacade(uow, f.acervoDeLivros(), f.movimentacao(), f.grupos(), publicador);
+            var devolucao = new TratadorDeDevolucao(facade, f.movimentacao(), f.grupos(),
                     new ConfiguracaoMulta(new MultaOriginalStrategy()), new BancoAAdapter(new BancoASimulado()));
             LocalDate data = LocalDate.of(2026,11,20);
             assertTrue(facade.solicitarReserva(id,id,data).sucesso());
             assertTrue(facade.efetivarEmprestimo(id,id,data,7).sucesso());
-            assertTrue(f.repositorioMovimentacao().buscarReservaAtiva(id,id).isEmpty());
+            assertTrue(f.movimentacao().consultarReserva(id,id).isEmpty());
             assertTrue(facade.renovarEmprestimo(id,id).sucesso());
             assertTrue(facade.renovarEmprestimo(id,id).sucesso());
             assertFalse(facade.renovarEmprestimo(id,id).sucesso());
-            assertEquals(data.plusDays(67),f.repositorioMovimentacao().buscarEmprestimoAtivo(id,id).orElseThrow().getDataVencimento());
+            assertEquals(data.plusDays(67),f.movimentacao().consultarEmprestimo(id,id).orElseThrow().getDataVencimento());
             assertTrue(devolucao.registrarDevolucao(id,id,data.plusDays(72)).sucesso());
-            assertTrue(f.repositorioMovimentacao().buscarEmprestimoAtivo(id,id).isEmpty());
+            assertTrue(f.movimentacao().consultarEmprestimo(id,id).isEmpty());
             var boleto=devolucao.emitirBoletoMulta(id,id).orElseThrow();
             assertEquals(new BigDecimal("5.00"),boleto.valor());
-            assertTrue(f.repositorioMovimentacao().listarBoletos().stream()
+            assertTrue(f.movimentacao().listarBoletos().stream()
                     .anyMatch(b -> b.idCobranca().equals(boleto.idCobranca()) && b.idLivro()==id && b.valor().compareTo(boleto.valor())==0));
             assertFalse(facade.solicitarReserva(id,id,data.plusDays(73)).sucesso());
             try (PreparedStatement st=c.prepareStatement("SELECT COUNT(*) FROM emprestimos WHERE id_livro=?")) {
                 st.setInt(1,id); try(ResultSet rs=st.executeQuery()) {rs.next();assertEquals(1,rs.getInt(1));}
             }
             uow.iniciar();
-            f.repositorioLivro().salvar(new Livro(id+1,"Desfazer"));
+            f.acervoDeLivros().inserirLivro(new Livro(id+1,"Desfazer"));
             uow.rollback();
-            assertTrue(f.repositorioLivro().buscarPorId(id+1).isEmpty());
+            assertTrue(f.acervoDeLivros().consultarLivro(id+1).isEmpty());
             int n=2;
             for(String estado:new String[]{"LIVRE","RESERVADO","EMPRESTADO","RENOVADO","DEVOLVIDO","REPARANDO","INCINERADO"}) {
                 Livro livro=new Livro(id+n++,"Estado "+estado); livro.reconstituirEstadoPorNome(estado);
-                f.repositorioLivro().salvar(livro);
-                assertEquals(estado,f.repositorioLivro().buscarPorId(livro.getIdLivro()).orElseThrow().getEstadoNome());
+                f.acervoDeLivros().inserirLivro(livro);
+                assertEquals(estado,f.acervoDeLivros().consultarLivro(livro.getIdLivro()).orElseThrow().getEstadoNome());
             }
-            assertThrows(IllegalStateException.class,()->f.repositorioRelacionamento().removerEstudante(id));
-            assertThrows(IllegalStateException.class,()->f.repositorioLivro().remover(id));
-            assertThrows(IllegalStateException.class,()->f.repositorioMovimentacao().salvarReserva(new Reserva(id+1,id,data)));
+            assertThrows(IllegalStateException.class,()->f.grupos().excluirEstudante(id));
+            assertThrows(IllegalStateException.class,()->f.acervoDeLivros().excluirLivro(id));
+            assertThrows(IllegalStateException.class,()->f.movimentacao().inserirReserva(new Reserva(id+1,id,data)));
             // Outra conexão comprova que os commits ficaram visíveis fora da UOW original.
             try(var outra=new MysqlPersistenciaFactory(url,usuario,System.getenv().getOrDefault("DB_PASS",""))) {
-                assertEquals("DEVOLVIDO",outra.repositorioLivro().buscarPorId(id).orElseThrow().getEstadoNome());
-                assertTrue(outra.repositorioMovimentacao().buscarEmprestimoAtivo(id,id).isEmpty());
+                assertEquals("DEVOLVIDO",outra.acervoDeLivros().consultarLivro(id).orElseThrow().getEstadoNome());
+                assertTrue(outra.movimentacao().consultarEmprestimo(id,id).isEmpty());
             }
         }
     }

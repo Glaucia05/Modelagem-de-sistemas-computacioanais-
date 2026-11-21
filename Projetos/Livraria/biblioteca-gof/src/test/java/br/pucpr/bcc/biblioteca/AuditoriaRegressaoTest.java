@@ -1,14 +1,15 @@
 package br.pucpr.bcc.biblioteca;
 
+import br.pucpr.bcc.biblioteca.banco.*;
 import br.pucpr.bcc.biblioteca.dominio.*;
-import br.pucpr.bcc.biblioteca.r02_strategy.*;
-import br.pucpr.bcc.biblioteca.r03_adapter.*;
-import br.pucpr.bcc.biblioteca.r04_facade.*;
-import br.pucpr.bcc.biblioteca.r05_observer.*;
-import br.pucpr.bcc.biblioteca.r06_command.*;
-import br.pucpr.bcc.biblioteca.r08_abstract_factory.*;
-import br.pucpr.bcc.biblioteca.r09_decorator.*;
-import br.pucpr.bcc.biblioteca.r10_composite.*;
+import br.pucpr.bcc.biblioteca.financeiro.multa.*;
+import br.pucpr.bcc.biblioteca.financeiro.cobranca.*;
+import br.pucpr.bcc.biblioteca.circulacao.*;
+import br.pucpr.bcc.biblioteca.eventos.*;
+import br.pucpr.bcc.biblioteca.comandos.*;
+import br.pucpr.bcc.biblioteca.persistencia.*;
+import br.pucpr.bcc.biblioteca.consulta.*;
+import br.pucpr.bcc.biblioteca.acervo.*;
 import br.pucpr.bcc.biblioteca.tratadores.*;
 import org.junit.jupiter.api.*;
 import java.time.*;
@@ -30,15 +31,15 @@ class AuditoriaRegressaoTest {
     @BeforeEach void preparar() {
         f = new MemoriaPersistenciaFactory();
         eventos = new PublicadorDevolucao();
-        facade = new CirculacaoFacade(f.unidadeTrabalho(), f.repositorioLivro(),
-                f.repositorioMovimentacao(), f.repositorioRelacionamento(), eventos);
-        cadastro = new TratadorDeCadastro(f.repositorioLivro(), f.repositorioRelacionamento());
+        facade = new CirculacaoFacade(f.unidadeTrabalho(), f.acervoDeLivros(),
+                f.movimentacao(), f.grupos(), eventos);
+        cadastro = new TratadorDeCadastro(f.acervoDeLivros(), f.grupos());
         cadastro.inserirPessoa("Ana", "Silva", "11122233344");
         cadastro.inserirEstudante("11122233344", 101, "M101");
         cadastro.inserirLivro(1, "GoF");
         config = new ConfiguracaoMulta(new MultaOriginalStrategy());
-        devolucao = new TratadorDeDevolucao(facade, f.repositorioMovimentacao(),
-                f.repositorioRelacionamento(), config, new BancoAAdapter(new BancoASimulado()));
+        devolucao = new TratadorDeDevolucao(facade, f.movimentacao(),
+                f.grupos(), config, new BancoAAdapter(new BancoASimulado()));
     }
     void emprestar() {
         assertTrue(facade.solicitarReserva(1,101,base).sucesso());
@@ -46,18 +47,18 @@ class AuditoriaRegressaoTest {
     }
     @Test void R04_rollbackRestauraLivroReservaEEmprestimoAposFalhaIntermediaria() {
         assertTrue(facade.solicitarReserva(1,101,base).sucesso());
-        RepositorioLivro falho = new RepositorioLivro() {
-            public void salvar(Livro l) { f.repositorioLivro().salvar(l); throw new IllegalStateException("Falha injetada"); }
-            public Optional<Livro> buscarPorId(int id) { return f.repositorioLivro().buscarPorId(id); }
-            public List<Livro> listarTodos() { return f.repositorioLivro().listarTodos(); }
-            public void remover(int id) { f.repositorioLivro().remover(id); }
+        AcervoDeLivros falho = new AcervoDeLivros() {
+            public void inserirLivro(Livro l) { f.acervoDeLivros().inserirLivro(l); throw new IllegalStateException("Falha injetada"); }
+            public Optional<Livro> consultarLivro(int id) { return f.acervoDeLivros().consultarLivro(id); }
+            public List<Livro> listarLivros() { return f.acervoDeLivros().listarLivros(); }
+            public void excluirLivro(int id) { f.acervoDeLivros().excluirLivro(id); }
         };
         var comFalha = new CirculacaoFacade(f.unidadeTrabalho(), falho,
-                f.repositorioMovimentacao(), f.repositorioRelacionamento(), eventos);
+                f.movimentacao(), f.grupos(), eventos);
         assertFalse(comFalha.efetivarEmprestimo(1,101,base,7).sucesso());
-        assertEquals("RESERVADO", f.repositorioLivro().buscarPorId(1).orElseThrow().getEstadoNome());
-        assertTrue(f.repositorioMovimentacao().buscarReservaAtiva(1,101).isPresent());
-        assertTrue(f.repositorioMovimentacao().buscarEmprestimoAtivo(1,101).isEmpty());
+        assertEquals("RESERVADO", f.acervoDeLivros().consultarLivro(1).orElseThrow().getEstadoNome());
+        assertTrue(f.movimentacao().consultarReserva(1,101).isPresent());
+        assertTrue(f.movimentacao().consultarEmprestimo(1,101).isEmpty());
         assertFalse(f.unidadeTrabalho().isAtiva());
         assertTrue(facade.efetivarEmprestimo(1,101,base,7).sucesso());
     }
@@ -69,7 +70,7 @@ class AuditoriaRegressaoTest {
         eventos.inscrever(email); eventos.inscrever(inspecao); eventos.inscrever(multa);
         eventos.inscrever(indicadores);
         eventos.inscrever(e -> aposCommit.set(!f.unidadeTrabalho().isAtiva()
-                && f.repositorioMovimentacao().buscarEmprestimoAtivo(1,101).isEmpty()));
+                && f.movimentacao().consultarEmprestimo(1,101).isEmpty()));
         emprestar();
         assertTrue(devolucao.registrarDevolucao(1,101,base.plusDays(7)).sucesso());
         assertTrue(aposCommit.get());
@@ -78,7 +79,7 @@ class AuditoriaRegressaoTest {
         assertEquals(1, indicadores.getTotalDevolucoes());
         assertEquals(0, indicadores.getTotalAtrasadas());
         assertTrue(devolucao.emitirBoletoMulta(1,101).isEmpty());
-        assertTrue(f.repositorioMovimentacao().listarBoletos().isEmpty());
+        assertTrue(f.movimentacao().listarBoletos().isEmpty());
         assertEquals("DEVOLVIDO", cadastro.consultarLivro(1).orElseThrow().getEstadoNome());
     }
     @Test void R06_submissoesSimultaneasRecebemMesmoResultadoESomamSoTrintaDias() throws Exception {
@@ -108,14 +109,14 @@ class AuditoriaRegressaoTest {
             liberar.countDown();
             assertEquals(a.get(2,TimeUnit.SECONDS), b.get(2,TimeUnit.SECONDS));
             assertEquals(1,chamadas.get());
-            assertEquals(base.plusDays(37), f.repositorioMovimentacao().buscarEmprestimoAtivo(1,101).orElseThrow().getDataVencimento());
+            assertEquals(base.plusDays(37), f.movimentacao().consultarEmprestimo(1,101).orElseThrow().getDataVencimento());
             assertTrue(executor.executar(new RenovarEmprestimoCommand("2","teste",Instant.now(),facade,1,101)).sucesso());
             assertFalse(executor.executar(new RenovarEmprestimoCommand("3","teste",Instant.now(),facade,1,101)).sucesso());
         } finally { liberar.countDown(); pool.shutdownNow(); assertTrue(pool.awaitTermination(3,TimeUnit.SECONDS)); }
     }
     @Test void R09_cacheHitMedidoSemReconsultarMetadadosEFalhaTemFallback() {
         AtomicInteger consultas = new AtomicInteger();
-        var baseConsulta = new ConsultaAcervoBase(f.repositorioLivro()) {
+        var baseConsulta = new ConsultaAcervoBase(f.acervoDeLivros()) {
             @Override public Optional<MetadadosLivro> consultarMetadados(int id) {
                 consultas.incrementAndGet(); return super.consultarMetadados(id);
             }
@@ -142,15 +143,15 @@ class AuditoriaRegressaoTest {
         assertThrows(IllegalArgumentException.class, () -> b.adicionar(new ItemLivroComposite(1,"duplicado")));
         assertThrows(NullPointerException.class, () -> sub.moverItemPara(item,null));
         assertEquals(1,sub.contarLivros());
-        emprestar(); var antes = f.repositorioMovimentacao().buscarEmprestimoAtivo(1,101).orElseThrow();
+        emprestar(); var antes = f.movimentacao().consultarEmprestimo(1,101).orElseThrow();
         assertTrue(sub.moverItemPara(item,b)); assertEquals(1,raiz.contarLivros());
         assertEquals("EMPRESTADO",cadastro.consultarLivro(1).orElseThrow().getEstadoNome());
-        assertEquals(antes.getDataVencimento(),f.repositorioMovimentacao().buscarEmprestimoAtivo(1,101).orElseThrow().getDataVencimento());
+        assertEquals(antes.getDataVencimento(),f.movimentacao().consultarEmprestimo(1,101).orElseThrow().getDataVencimento());
     }
     @Test void R01_livroExcluidoNaoPodeReservar() {
         assertTrue(cadastro.excluirLivro(1));
         assertFalse(facade.solicitarReserva(1,101,base).sucesso());
-        assertFalse(new ConsultaAcervoBase(f.repositorioLivro()).podeReservar(1));
+        assertFalse(new ConsultaAcervoBase(f.acervoDeLivros()).podeReservar(1));
     }
     @Test void R02_multaEmitidaPreservaValorEPolitica() {
         emprestar(); assertTrue(devolucao.registrarDevolucao(1,101,base.plusDays(12)).sucesso());
@@ -158,8 +159,8 @@ class AuditoriaRegressaoTest {
         config.definirPolitica(new MultaToleranciaDoisDiasStrategy());
         assertEquals(new BigDecimal("5.00"),boleto.valor());
         assertEquals("ORIGINAL_1_REAL_DIA",boleto.politicaAplicada());
-        assertEquals(boleto,f.repositorioMovimentacao().listarBoletos().get(0));
-        for (PoliticaMulta politica : List.of(new MultaOriginalStrategy(),new MultaTetoVinteStrategy(),new MultaToleranciaDoisDiasStrategy()))
+        assertEquals(boleto,f.movimentacao().listarBoletos().get(0));
+        for (iMulta politica : List.of(new MultaOriginalStrategy(),new MultaTetoVinteStrategy(),new MultaToleranciaDoisDiasStrategy()))
             assertEquals(new BigDecimal("0.00"),politica.calcular(base,base.minusDays(1)));
         assertEquals(new BigDecimal("0.00"),new MultaToleranciaDoisDiasStrategy().calcular(base,base.plusDays(2)));
     }
@@ -201,12 +202,12 @@ class AuditoriaRegressaoTest {
             public boolean isAtiva() { return false; }
         };
         // Repositórios não são acessados se o início falhar.
-        RepositorioLivro livros=(RepositorioLivro)java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
-                new Class[]{RepositorioLivro.class},(proxy,method,args)-> { if(method.getName().equals("unidadeTrabalho")) return null; throw new AssertionError(); });
-        RepositorioMovimentacao mov=(RepositorioMovimentacao)java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
-                new Class[]{RepositorioMovimentacao.class},(proxy,method,args)-> { if(method.getName().equals("unidadeTrabalho")) return null; throw new AssertionError(); });
-        RepositorioRelacionamento rel=(RepositorioRelacionamento)java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
-                new Class[]{RepositorioRelacionamento.class},(proxy,method,args)-> { if(method.getName().equals("unidadeTrabalho")) return null; throw new AssertionError(); });
+        AcervoDeLivros livros=(AcervoDeLivros)java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class[]{AcervoDeLivros.class},(proxy,method,args)-> { if(method.getName().equals("unidadeTrabalho")) return null; throw new AssertionError(); });
+        Movimentacao mov=(Movimentacao)java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class[]{Movimentacao.class},(proxy,method,args)-> { if(method.getName().equals("unidadeTrabalho")) return null; throw new AssertionError(); });
+        GruposDoSistema rel=(GruposDoSistema)java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class[]{GruposDoSistema.class},(proxy,method,args)-> { if(method.getName().equals("unidadeTrabalho")) return null; throw new AssertionError(); });
         var fachada=new CirculacaoFacade(falha,livros,mov,rel,eventos);
         assertFalse(fachada.registrarDevolucao(1,101,base).sucesso());
         assertEquals(0,notificacoes.get());
@@ -217,7 +218,7 @@ class AuditoriaRegressaoTest {
         assertTrue(facade.existeReservaAtiva(1,101));
         assertTrue(facade.efetivarEmprestimo(1,101,base,7).sucesso());
         assertFalse(facade.registrarDevolucao(1,101,base.minusDays(1)).sucesso());
-        Livro livro=f.repositorioLivro().buscarPorId(1).orElseThrow();
+        Livro livro=f.acervoDeLivros().consultarLivro(1).orElseThrow();
         var outro=new Emprestimo(2,101,base,base.plusDays(7));
         assertFalse(livro.renovar(outro)); assertFalse(livro.devolver(outro));
         assertFalse(livro.reservar(101)); assertFalse(livro.inspecionar(true));
@@ -227,17 +228,17 @@ class AuditoriaRegressaoTest {
     @Test void R08_recusaMisturaDeFabricasEAlteracoesSemSalvarNaoVazam() {
         var outra=new MemoriaPersistenciaFactory();
         assertThrows(IllegalArgumentException.class,()->new CirculacaoFacade(f.unidadeTrabalho(),
-                outra.repositorioLivro(),f.repositorioMovimentacao(),f.repositorioRelacionamento(),eventos));
-        Livro l=f.repositorioLivro().buscarPorId(1).orElseThrow(); l.reservar(101);
-        assertEquals("LIVRE",f.repositorioLivro().buscarPorId(1).orElseThrow().getEstadoNome());
+                outra.acervoDeLivros(),f.movimentacao(),f.grupos(),eventos));
+        Livro l=f.acervoDeLivros().consultarLivro(1).orElseThrow(); l.reservar(101);
+        assertEquals("LIVRE",f.acervoDeLivros().consultarLivro(1).orElseThrow().getEstadoNome());
         f.unidadeTrabalho().iniciar();
-        f.repositorioRelacionamento().salvarPessoa(new Pessoa("Outra","Pessoa","999"));
+        f.grupos().inserirPessoa(new Pessoa("Outra","Pessoa","999"));
         f.unidadeTrabalho().rollback();
-        assertTrue(f.repositorioRelacionamento().buscarPessoaPorCpf("999").isEmpty());
+        assertTrue(f.grupos().consultarPessoa("999").isEmpty());
     }
     @Test void R07_ordemDoTemplateFinalEValidacaoSemGravacao() throws Exception {
         var ordem=new ArrayList<String>();
-        var template=new br.pucpr.bcc.biblioteca.r07_template.RotinaCadastroTemplate<String>() {
+        var template=new br.pucpr.bcc.biblioteca.cadastro.RotinaCadastroTemplate<String>() {
             protected Optional<String> buscarExistente(){ ordem.add("buscar"); return Optional.empty(); }
             protected void validar(){ ordem.add("validar"); }
             protected void verificarPreRequisitos(){ ordem.add("pre"); }
@@ -254,32 +255,32 @@ class AuditoriaRegressaoTest {
     }
     @Test void R05_rollbackDaDevolucaoNaoPublicaEvento() {
         emprestar(); AtomicInteger eventosRecebidos=new AtomicInteger(); eventos.inscrever(e -> eventosRecebidos.incrementAndGet());
-        RepositorioLivro falho=new RepositorioLivro() {
-            public Optional<Livro> buscarPorId(int id) { return f.repositorioLivro().buscarPorId(id); }
-            public void salvar(Livro l) { throw new IllegalStateException("falha ao gravar estado"); }
-            public List<Livro> listarTodos(){return f.repositorioLivro().listarTodos();}
-            public void remover(int id){throw new UnsupportedOperationException();}
+        AcervoDeLivros falho=new AcervoDeLivros() {
+            public Optional<Livro> consultarLivro(int id) { return f.acervoDeLivros().consultarLivro(id); }
+            public void inserirLivro(Livro l) { throw new IllegalStateException("falha ao gravar estado"); }
+            public List<Livro> listarLivros(){return f.acervoDeLivros().listarLivros();}
+            public void excluirLivro(int id){throw new UnsupportedOperationException();}
         };
-        var fachada=new CirculacaoFacade(f.unidadeTrabalho(),falho,f.repositorioMovimentacao(),f.repositorioRelacionamento(),eventos);
+        var fachada=new CirculacaoFacade(f.unidadeTrabalho(),falho,f.movimentacao(),f.grupos(),eventos);
         assertFalse(fachada.registrarDevolucao(1,101,base.plusDays(10)).sucesso());
         assertEquals(0,eventosRecebidos.get());
-        assertTrue(f.repositorioMovimentacao().buscarDevolucao(1,101).isEmpty());
-        assertTrue(f.repositorioMovimentacao().buscarEmprestimoAtivo(1,101).isPresent());
+        assertTrue(f.movimentacao().consultarDevolucao(1,101).isEmpty());
+        assertTrue(f.movimentacao().consultarEmprestimo(1,101).isPresent());
         assertEquals("EMPRESTADO",cadastro.consultarLivro(1).orElseThrow().getEstadoNome());
     }
     @Test void R08_memoriaImpedeOrfaosComoFamiliaRelacional() {
-        assertThrows(IllegalStateException.class,()->f.repositorioMovimentacao().salvarReserva(new Reserva(99,101,base)));
+        assertThrows(IllegalStateException.class,()->f.movimentacao().inserirReserva(new Reserva(99,101,base)));
         emprestar();
         assertThrows(IllegalStateException.class,()->cadastro.excluirEstudante(101));
         assertThrows(IllegalStateException.class,()->cadastro.excluirPessoa("11122233344"));
-        assertThrows(IllegalStateException.class,()->f.repositorioLivro().remover(1));
-        assertTrue(f.repositorioMovimentacao().buscarEmprestimoAtivo(1,101).isPresent());
+        assertThrows(IllegalStateException.class,()->f.acervoDeLivros().excluirLivro(1));
+        assertTrue(f.movimentacao().consultarEmprestimo(1,101).isPresent());
     }
     @Test void R02_demoCompletaEmiteCincoReaisAposRenovacao() {
         var original=System.out; var bytes=new java.io.ByteArrayOutputStream();
         try (var saida=new java.io.PrintStream(bytes, true, java.nio.charset.StandardCharsets.UTF_8)) {
             System.setOut(saida);
-            br.pucpr.bcc.biblioteca.ui.ConsoleApp.main(new String[]{"demo"});
+            br.pucpr.bcc.biblioteca.web.ConsoleApp.main(new String[]{"demo"});
         } finally { System.setOut(original); }
         String texto=bytes.toString(java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(texto.contains("valor=5.00")); assertFalse(texto.contains("sucesso=false"));

@@ -1,9 +1,9 @@
 package br.pucpr.bcc.biblioteca.tratadores;
 
 import br.pucpr.bcc.biblioteca.interfaces.iEmprestimo;
-import br.pucpr.bcc.biblioteca.r04_facade.CirculacaoFacade;
-import br.pucpr.bcc.biblioteca.r04_facade.ComprovanteOperacao;
-import br.pucpr.bcc.biblioteca.r06_command.*;
+import br.pucpr.bcc.biblioteca.circulacao.CirculacaoFacade;
+import br.pucpr.bcc.biblioteca.circulacao.ComprovanteOperacao;
+import br.pucpr.bcc.biblioteca.comandos.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
