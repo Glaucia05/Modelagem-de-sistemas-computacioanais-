@@ -40,7 +40,7 @@ Este registro descreve o uso de duas ferramentas de IA no projeto: o Gemini (Goo
 
 **Finalidade:** auditoria técnica, revisão dos padrões GoF, correções, testes, validação arquitetural, documentação e preparação para entrega.
 
-Etapa de 21/11/2026. O nome de modelo acima registra a informação do usuário; não constitui verificação independente da variante em execução. Os registros anteriores do Gemini e da primeira auditoria foram preservados integralmente e descrevem suas respectivas etapas.
+O nome de modelo acima registra a informação do usuário; não constitui verificação independente da variante em execução. Os registros anteriores do Gemini e da primeira auditoria foram preservados integralmente e descrevem suas respectivas etapas.
 
 - **Principais prompts:** continuar a partir dos 32 testes aprovados; homologar R08 com MySQL real se disponível; reconciliar o Astah sem apresentar modelos novos como originais; criar tutorial reproduzível; preservar o histórico Gemini; separar commits em português; criar/publicar `sergio-calazans/finalizacao-gof` e preparar PR sem merge. O usuário autorizou expressamente commits e push nesta etapa, revogando a restrição da auditoria anterior.
 - **Fontes e arquivos analisados:** enunciado PDF de cinco páginas; original Astah; fontes Java de domínio, dez padrões, interfaces, tratadores e CLI; `pom.xml`, `schema.sql`, README, registro de IA e todas as classes de teste. O código existente e os testes orientaram os novos diagramas.
