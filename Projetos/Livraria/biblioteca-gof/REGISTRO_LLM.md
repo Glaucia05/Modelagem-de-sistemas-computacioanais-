@@ -1,6 +1,6 @@
 # Registro de Uso de LLMs
 
-Este registro descreve o uso de duas ferramentas de IA no projeto: o Gemini (Google), na implementação inicial, e o Codex (OpenAI), na auditoria e na finalização de 21/11/2026. As duas também ajudaram na documentação: o Gemini apoiou a documentação técnica inicial, e o Codex redigiu o `TUTORIAL_EXECUCAO.md`, atualizou o README e este registro e a partir de decisões técnicas de documentação da equipe escreveu a documentação de procedência dos modelos UML. Os registros de cada etapa abaixo foram mantidos como foram escritos na época.
+Este registro descreve o uso de três ferramentas de IA no projeto: o Gemini (Google), na implementação inicial; o Codex (OpenAI), na auditoria e na finalização de 21/11/2026; e o Claude (Anthropic), no alinhamento dos nomes do código com as modelagens da equipe. Os três também ajudaram na documentação: o Gemini apoiou a documentação técnica inicial, o Codex redigiu o `TUTORIAL_EXECUCAO.md`, atualizou o README e este registro e, a partir de decisões técnicas de documentação da equipe, escreveu a documentação de procedência dos modelos UML, e o Claude redigiu `docs/CORRESPONDENCIA_NOMES.md` e a versão atual do README. Os registros de cada etapa abaixo foram mantidos como foram escritos na época.
 
 ## Ferramentas e Modelos Utilizados
 - **Modelo:** Gemini (Google)
@@ -19,7 +19,7 @@ Este registro descreve o uso de duas ferramentas de IA no projeto: o Gemini (Goo
 - **Descartado nesta etapa:** nenhuma sugestão do Gemini foi registrada como descartada.
 
 
-## Auditoria e correções com Codex 
+## Auditoria e correções com Codex
 
 - **Ferramenta/modelo identificável:** Codex, OpenAI; família GPT-6 indicada pelo ambiente. Variante exata não exposta. Nenhum agente auxiliar foi usado.
 - **Solicitação:** auditoria técnica completa em Java/Maven/JUnit, leitura do enunciado, inspeção do Astah, verificação dos dez padrões, correção de defeitos comprovados, regressões, demonstração e relatório A–F. A solicitação autorizou alterações locais e vedou commits/pushes/merges automáticos.
@@ -32,7 +32,7 @@ Este registro descreve o uso de duas ferramentas de IA no projeto: o Gemini (Goo
 - **Preservação:** registros anteriores mantidos; pacotes e nomes públicos existentes preservados; interfaces só receberam extensões compatíveis para identidade da unidade/fechamento. Nenhum banco externo foi alterado e nenhum diagrama foi salvo/modificado. O relatório completo, matriz, evidências e pendências estão no README.
 
 
-### Revisão, correção e finalização 
+### Revisão, correção e finalização
 
 **Ferramenta:** OpenAI Codex
 
@@ -47,18 +47,23 @@ O nome de modelo acima registra a informação do usuário; não constitui verif
 - **Aceito e implementado (sob autorização):** preservadas as correções anteriores; IDs dos bancos simulados passaram de contadores por instância a UUID com prefixos BA/BB, evitando colisões com boletos persistidos após reinício; nova regressão de IDs e verificação de recuperação do boleto no MySQL. Nenhuma implementação inicial do Gemini foi atribuída ao Codex.
 - **Integração:** criado perfil Maven opcional `mysql-it` e `MysqlIntegracaoIT`, restrito à base `biblioteca_gof_validacao`. Verifica conexão/UOW compartilhada, fluxo, limite de renovação, boleto, uma linha de empréstimo, rollback, estados, FKs e visibilidade em outra conexão. Credenciais foram disponibilizadas pelo usuário em variáveis locais; não foram impressas nem gravadas no repositório. O teste conserva registros e só cria tabelas ausentes.
 - **Testes e execução:** 33 testes padrão aprovados (os 32 anteriores mais a regressão de IDs), com zero falhas, erros ou ignorados; 1 teste adicional aprovado em MySQL 8.0.43. Compilação com `--release 17` em JDK 25.0.3, demo automática com multa R$ 5,00 e menu por entrada de terminal. Java 17 exato, VS Code, SMTP/bancos financeiros reais e Oracle não foram homologados.
-- **Modelagem:** cópia original Astah preservada por hash; revisão separada com 10 classes, 10 sequências e estados de Livro, criada/validada/exportada pela API/CLI oficial Astah 12. O PDF deriva dessa exportação. Corrigida na revisão a guarda `<2`; nomes e operações refletem o código. As visões são resumidas, com limites explicitados no README UML. 
+- **Modelagem:** cópia original Astah preservada por hash; revisão separada com 10 classes, 10 sequências e estados de Livro, criada/validada/exportada pela API/CLI oficial Astah 12. O PDF deriva dessa exportação. Corrigida na revisão a guarda `<2`; nomes e operações refletem o código. As visões são resumidas, com limites explicitados no README UML.
 - **Documentação:** Codex redigiu `TUTORIAL_EXECUCAO.md`, atualizou rastreabilidade/resultados/limites no README e criou a documentação de procedência UML.
 - **Descartado:** reescrita, frameworks adicionais, outbox, transações distribuídas, banco de chaves duráveis e webhook financeiro real. Não são necessários aos cenários acadêmicos exigidos e ampliariam o escopo sem benefício demonstrado. Também foram descartados limpeza de dados, alteração do original Astah, redução de expectativas dos testes e alegação de nota 100 garantida.
 - **Limitações remanescentes:** idempotência do executor e deduplicação do adaptador locais à instância; emissão repetida não possui chave durável; falha entre banco simulado e gravação requer conciliação; cache sem TTL; carga/concorrência entre processos não homologadas.
 - **Git:** Codex preparou a branch solicitada e os commits lógicos em português, inspecionando diffs e exclusão de credenciais/temporários. Publicação autorizada apenas nessa branch e PR para revisão, sem merge, force push, tags ou releases. O resultado efetivo da publicação e os hashes não constam neste repositório; foram apresentados apenas na resposta da ferramenta.
 
 
-## Alinhamento dos nomes com as modelagens da equipe
+## Alinhamento dos nomes com as modelagens da equipe (Claude)
 
-- **Ferramenta:** Claude (Anthropic).
-- **Pedido da equipe:** usar no projeto os nomes das modelagens da equipe (`docs/modelagem/`), não os do enunciado; registrar a correspondência nos documentos; descartar os arquivos `.asta` e PDF gerados automaticamente, pois os modelos válidos partem das modelagens da equipe.
-- **Aceito e aplicado:** renomeação de pacotes (de `rNN_padrao` para pacotes por componente), `RepositorioLivro`→`AcervoDeLivros`, `RepositorioMovimentacao`→`Movimentacao`, `RepositorioRelacionamento`→`GruposDoSistema` (reunindo `GrupoDePessoas`, `GrupoDeAcademicos`, `GrupoDeColaboradores`), `PoliticaMulta`→`iMulta`, novas interfaces `iCobranca` e `iQuitacao`, e métodos de persistência para os nomes da classe de projeto. Tabelas em `docs/CORRESPONDENCIA_NOMES.md`.
-- **Removido:** `docs/uml/Biblioteca-GoF.asta`, `docs/uml/Diagramas-GoF.pdf` e `docs/uml/ferramentas/`. Mantido o `.asta` original da equipe.
-- **Verificação:** compilação do código principal e dos testes e execução dos 26 testes em memória (`RequisitosGoFTest` e `AuditoriaRegressaoTest`) com stubs mínimos de JUnit, sem Maven. `PersistenciaJdbcTest` (H2) e `MysqlIntegracaoIT` (MySQL) só foram compilados; a equipe deve rodar `mvn clean test` antes da entrega.
-- **Não alterado:** nomes dos métodos de `iEmprestimo`, `iDevolucao` e demais interfaces de componente (já coincidem com o diagrama de componentes), nomes das classes dos padrões e testes `R01`…`R10`.
+- **Ferramenta/modelo:** Claude, Anthropic; Claude Sonnet 5.5.
+- **Principais pedidos:**
+   1. Usar no código os nomes das modelagens da equipe (diagramas de componentes, classes de projeto e estados), e não os do enunciado.
+   2. Registrar a correspondência entre enunciado, modelagens e código nos documentos.
+   3. Descartar os arquivos `.asta` e PDF gerados automaticamente, pois os modelos válidos partem das modelagens da equipe.
+   4. Refazer o README no formato anterior, com o exigido pelo professor e sem datas nem informações extras.
+   5. Revisar `CORRESPONDENCIA_NOMES.md`, `TUTORIAL_EXECUCAO.md` e este registro.
+- **Aceito e aplicado:** pacotes por componente no lugar de `rNN_padrao` e `ui`; `RepositorioLivro`→`AcervoDeLivros`; `RepositorioMovimentacao`→`Movimentacao`; `RepositorioRelacionamento`→`GruposDoSistema` (reunindo `GrupoDePessoas`, `GrupoDeAcademicos` e `GrupoDeColaboradores`); `PoliticaMulta`→`iMulta`; novas interfaces `iCobranca` e `iQuitacao`; métodos de persistência com os nomes da classe de projeto (`inserirReserva`, `consultarEmprestimo`, `excluirPessoa` etc.); `BancoASimulado` e `BancoBSimulado` no pacote `banco`; remoção de `Biblioteca-GoF.asta`, `Diagramas-GoF.pdf` e `docs/uml/ferramentas/`; PDFs das modelagens em `docs/modelagem/`.
+- **Corrigido pela equipe:** a primeira versão do README foi rejeitada e refeita no formato anterior; a primeira versão de `CORRESPONDENCIA_NOMES.md`, com tabelas de "antes e depois", foi refeita apenas com a estrutura atual do código.
+- **Descartado:** gerar novos diagramas UML ou arquivos `.asta` (os diagramas dos padrões devem ser desenhados pela equipe); renomear métodos de `iEmprestimo`, `iDevolucao` e demais interfaces de componente, que já coincidem com o diagrama de componentes; renomear as classes dos padrões e os testes `R01` a `R10`; criar a superclasse `Transacao` da modelagem, deixada como pendência de modelagem em `docs/uml/README.md`.
+- **Verificação:** compilação do código principal e dos testes e execução de 26 testes em memória (`RequisitosGoFTest` e `AuditoriaRegressaoTest`) com stubs mínimos de JUnit, sem Maven. `PersistenciaJdbcTest` (H2) e `MysqlIntegracaoIT` (MySQL) só foram compilados; a equipe deve executar `mvn clean test` antes da entrega.
