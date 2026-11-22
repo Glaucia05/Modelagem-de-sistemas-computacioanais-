@@ -1,6 +1,6 @@
 package br.pucpr.bcc.biblioteca.dominio;
 
-import br.pucpr.bcc.biblioteca.estado.*;
+import br.pucpr.bcc.biblioteca.r01_state.*;
 import java.util.Objects;
 
 public class Livro {

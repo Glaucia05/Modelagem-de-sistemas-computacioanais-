@@ -1,17 +1,16 @@
 package br.pucpr.bcc.biblioteca;
 
-import br.pucpr.bcc.biblioteca.banco.*;
 import br.pucpr.bcc.biblioteca.dominio.*;
 import br.pucpr.bcc.biblioteca.interfaces.*;
-import br.pucpr.bcc.biblioteca.financeiro.multa.*;
-import br.pucpr.bcc.biblioteca.financeiro.cobranca.*;
-import br.pucpr.bcc.biblioteca.circulacao.CirculacaoFacade;
-import br.pucpr.bcc.biblioteca.circulacao.ComprovanteOperacao;
-import br.pucpr.bcc.biblioteca.eventos.*;
-import br.pucpr.bcc.biblioteca.comandos.ExecutorComando;
-import br.pucpr.bcc.biblioteca.persistencia.*;
-import br.pucpr.bcc.biblioteca.consulta.*;
-import br.pucpr.bcc.biblioteca.acervo.*;
+import br.pucpr.bcc.biblioteca.r02_strategy.*;
+import br.pucpr.bcc.biblioteca.r03_adapter.*;
+import br.pucpr.bcc.biblioteca.r04_facade.CirculacaoFacade;
+import br.pucpr.bcc.biblioteca.r04_facade.ComprovanteOperacao;
+import br.pucpr.bcc.biblioteca.r05_observer.*;
+import br.pucpr.bcc.biblioteca.r06_command.ExecutorComando;
+import br.pucpr.bcc.biblioteca.r08_abstract_factory.*;
+import br.pucpr.bcc.biblioteca.r09_decorator.*;
+import br.pucpr.bcc.biblioteca.r10_composite.*;
 import br.pucpr.bcc.biblioteca.tratadores.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,15 +47,15 @@ class RequisitosGoFTest {
                 factory.unidadeTrabalho(),
                 factory.acervoDeLivros(),
                 factory.movimentacao(),
-                factory.grupos(),
+                factory.relacionamento(),
                 publicador
         );
-        cadastro = new TratadorDeCadastro(factory.acervoDeLivros(), factory.grupos());
+        cadastro = new TratadorDeCadastro(factory.acervoDeLivros(), factory.relacionamento());
         emprestimo = new TratadorDeEmprestimo(facade, new ExecutorComando());
         devolucao = new TratadorDeDevolucao(
                 facade,
                 factory.movimentacao(),
-                factory.grupos(),
+                factory.relacionamento(),
                 configMulta,
                 adapterA
         );
@@ -98,9 +97,9 @@ class RequisitosGoFTest {
     @Test
     void R02_politicasMultaCincoDiasESemAtraso() {
         LocalDate venc = LocalDate.of(2026, 11, 10);
-        iMulta original = new MultaOriginalStrategy();
-        iMulta tolerancia = new MultaToleranciaDoisDiasStrategy();
-        iMulta teto = new MultaTetoVinteStrategy();
+        PoliticaMulta original = new MultaOriginalStrategy();
+        PoliticaMulta tolerancia = new MultaToleranciaDoisDiasStrategy();
+        PoliticaMulta teto = new MultaTetoVinteStrategy();
 
         assertEquals(new BigDecimal("5.00"), original.calcular(venc, venc.plusDays(5)));
         assertEquals(new BigDecimal("3.00"), tolerancia.calcular(venc, venc.plusDays(5)));
@@ -185,7 +184,7 @@ class RequisitosGoFTest {
 
         assertThrows(IllegalStateException.class,
                 () -> cadastro.inserirEstudante("99999999999", 202, "MAT-202"));
-        assertTrue(factory.grupos().consultarEstudante(202).isEmpty());
+        assertTrue(factory.relacionamento().consultarEstudante(202).isEmpty());
     }
 
     @Test

@@ -2,19 +2,15 @@ package br.pucpr.bcc.biblioteca.dominio;
 
 import java.time.LocalDate;
 
-public class Emprestimo {
+/** Transação de empréstimo: a data da transação é a data de início. */
+public class Emprestimo extends Transacao {
     private long idEmprestimo;
-    private final int idLivro;
-    private final int idEstudante;
-    private final LocalDate dataInicio;
     private LocalDate dataVencimento;
     private String estado = "EMPRESTADO";
     private boolean devolvido = false;
 
     public Emprestimo(int idLivro, int idEstudante, LocalDate dataInicio, LocalDate dataVencimento) {
-        this.idLivro = idLivro;
-        this.idEstudante = idEstudante;
-        this.dataInicio = dataInicio;
+        super(idLivro, idEstudante, dataInicio);
         this.dataVencimento = dataVencimento;
     }
 
@@ -29,14 +25,15 @@ public class Emprestimo {
         this.estado = estado;
         this.devolvido = devolvido;
     }
-    public int getIdLivro() { return idLivro; }
-    public int getIdEstudante() { return idEstudante; }
-    public LocalDate getDataInicio() { return dataInicio; }
+    public LocalDate getDataInicio() { return getData(); }
     public LocalDate getDataVencimento() { return dataVencimento; }
     public String getEstado() { return estado; }
+    /** Operação do Diagrama de Classes de Projeto: {@code consultarEstado() : String}. */
+    public String consultarEstado() { return estado; }
     public boolean isDevolvido() { return devolvido; }
 
-    public void estenderVencimento(int dias) {
+    /** Operação do Diagrama de Classes de Projeto: {@code renovar(dias : int)}; estende o vencimento. */
+    public void renovar(int dias) {
         this.dataVencimento = this.dataVencimento.plusDays(dias);
         this.estado = "RENOVADO";
     }

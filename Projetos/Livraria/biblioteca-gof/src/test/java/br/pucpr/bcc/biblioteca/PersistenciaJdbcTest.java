@@ -1,7 +1,7 @@
 package br.pucpr.bcc.biblioteca;
 
 import br.pucpr.bcc.biblioteca.dominio.*;
-import br.pucpr.bcc.biblioteca.persistencia.*;
+import br.pucpr.bcc.biblioteca.r08_abstract_factory.*;
 import org.junit.jupiter.api.*;
 import java.nio.file.*;
 import java.sql.*;
@@ -25,9 +25,9 @@ class PersistenciaJdbcTest {
         cadastrarVinculos();
     }
     void cadastrarVinculos() {
-        f.grupos().inserirPessoa(new Pessoa("Ana","Silva","111"));
-        f.grupos().inserirEstudante(new Estudante(101,"111","M101"));
-        f.acervoDeLivros().inserirLivro(new Livro(1,"GoF"));
+        f.relacionamento().inserirPessoa(new Pessoa("Ana","Silva","111"));
+        f.relacionamento().inserirEstudante(new Estudante(101,"111","M101"));
+        f.acervoDeLivros().salvar(new Livro(1,"GoF"));
     }
     @AfterEach void fechar() throws Exception { conexao.close(); }
     @Test void R08_renovacaoAtualizaLinhaEDevolucaoEncerraEmprestimo() throws Exception {
@@ -35,7 +35,7 @@ class PersistenciaJdbcTest {
         Emprestimo emp=new Emprestimo(1,101,inicio,inicio.plusDays(7));
         f.movimentacao().inserirEmprestimo(emp);
         emp=f.movimentacao().consultarEmprestimo(1,101).orElseThrow();
-        emp.estenderVencimento(30); f.movimentacao().inserirEmprestimo(emp);
+        emp.renovar(30); f.movimentacao().inserirEmprestimo(emp);
         Emprestimo rec=f.movimentacao().consultarEmprestimo(1,101).orElseThrow();
         assertEquals("RENOVADO",rec.getEstado());
         assertEquals(inicio.plusDays(37),rec.getDataVencimento());
@@ -48,29 +48,29 @@ class PersistenciaJdbcTest {
         for(String estado : new String[]{"LIVRE","RESERVADO","EMPRESTADO","RENOVADO","DEVOLVIDO","REPARANDO","INCINERADO"}) {
             Livro l=new Livro(++id,"Estado "+estado); l.reconstituirEstadoPorNome(estado);
             l.setNumRenovacoes(2); l.setIdReservadoParaEstudante(101); l.marcarExcluido();
-            f.acervoDeLivros().inserirLivro(l);
+            f.acervoDeLivros().salvar(l);
             Livro rec=f.acervoDeLivros().consultarLivro(id).orElseThrow();
             assertEquals(estado,rec.getEstadoNome()); assertEquals(2,rec.getNumRenovacoes());
             assertEquals(101,rec.getIdReservadoParaEstudante()); assertTrue(rec.isExcluido());
         }
-        assertEquals(7,f.acervoDeLivros().listarLivros().size());
-        for(Livro l:f.acervoDeLivros().listarLivros()) {
+        assertEquals(7,f.acervoDeLivros().listarTodos().size());
+        for(Livro l:f.acervoDeLivros().listarTodos()) {
             assertEquals(101,l.getIdReservadoParaEstudante()); assertTrue(l.isExcluido());
         }
     }
     @Test void R08_rollbackJdbcDesfazEscritaECommitPersiste() {
-        f.unidadeTrabalho().iniciar(); f.acervoDeLivros().inserirLivro(new Livro(20,"rollback"));
+        f.unidadeTrabalho().iniciar(); f.acervoDeLivros().salvar(new Livro(20,"rollback"));
         f.unidadeTrabalho().rollback(); assertTrue(f.acervoDeLivros().consultarLivro(20).isEmpty());
-        f.unidadeTrabalho().iniciar(); f.acervoDeLivros().inserirLivro(new Livro(21,"commit"));
+        f.unidadeTrabalho().iniciar(); f.acervoDeLivros().salvar(new Livro(21,"commit"));
         f.unidadeTrabalho().commit(); assertTrue(f.acervoDeLivros().consultarLivro(21).isPresent());
         assertFalse(f.unidadeTrabalho().isAtiva());
     }
     @Test void R07_R08_atualizarPessoaReferenciadaNaoExecutaDeleteImplicito() {
-        f.grupos().inserirPessoa(new Pessoa("Ana","Silva","111"));
-        f.grupos().inserirEstudante(new Estudante(101,"111","M101"));
-        assertDoesNotThrow(() -> f.grupos().inserirPessoa(new Pessoa("Ana Maria","Silva","111")));
-        assertEquals("Ana Maria",f.grupos().consultarPessoa("111").orElseThrow().nome());
-        assertTrue(f.grupos().consultarEstudante(101).isPresent());
+        f.relacionamento().inserirPessoa(new Pessoa("Ana","Silva","111"));
+        f.relacionamento().inserirEstudante(new Estudante(101,"111","M101"));
+        assertDoesNotThrow(() -> f.relacionamento().inserirPessoa(new Pessoa("Ana Maria","Silva","111")));
+        assertEquals("Ana Maria",f.relacionamento().consultarPessoa("111").orElseThrow().nome());
+        assertTrue(f.relacionamento().consultarEstudante(101).isPresent());
     }
 
     @Test void R08_falhaCommitPermiteRollbackERetentativa() throws Exception {
@@ -85,11 +85,11 @@ class PersistenciaJdbcTest {
             @Override public Connection getConnection() { return proxy; }
         };
         var livros=new MysqlPersistenciaFactory.MysqlAcervoDeLivros(unidade);
-        unidade.iniciar(); livros.inserirLivro(new Livro(9,"não confirmar"));
+        unidade.iniciar(); livros.salvar(new Livro(9,"não confirmar"));
         assertThrows(IllegalStateException.class,unidade::commit);
         assertTrue(unidade.isAtiva()); unidade.rollback();
         assertFalse(unidade.isAtiva()); assertTrue(livros.consultarLivro(9).isEmpty());
-        unidade.iniciar(); livros.inserirLivro(new Livro(10,"confirmar")); unidade.commit();
+        unidade.iniciar(); livros.salvar(new Livro(10,"confirmar")); unidade.commit();
         assertTrue(livros.consultarLivro(10).isPresent());
     }
     @Test void R08_conexaoInvalidaNaoMarcaTransacaoAtiva() {
@@ -101,8 +101,8 @@ class PersistenciaJdbcTest {
     @Test void R08_integridadeReferencialImpedeOrfaos() {
         assertThrows(IllegalStateException.class,()->f.movimentacao().inserirReserva(new Reserva(99,101,LocalDate.now())));
         f.movimentacao().inserirReserva(new Reserva(1,101,LocalDate.now()));
-        assertThrows(IllegalStateException.class,()->f.grupos().excluirEstudante(101));
+        assertThrows(IllegalStateException.class,()->f.relacionamento().excluirEstudante(101));
         assertThrows(IllegalStateException.class,()->f.acervoDeLivros().excluirLivro(1));
-        assertThrows(IllegalStateException.class,()->f.grupos().excluirPessoa("111"));
+        assertThrows(IllegalStateException.class,()->f.relacionamento().excluirPessoa("111"));
     }
 }

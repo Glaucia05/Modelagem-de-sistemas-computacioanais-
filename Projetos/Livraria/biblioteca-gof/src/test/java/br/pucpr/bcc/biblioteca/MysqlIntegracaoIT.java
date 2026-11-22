@@ -1,12 +1,11 @@
 package br.pucpr.bcc.biblioteca;
 
-import br.pucpr.bcc.biblioteca.banco.*;
 import br.pucpr.bcc.biblioteca.dominio.*;
-import br.pucpr.bcc.biblioteca.financeiro.multa.*;
-import br.pucpr.bcc.biblioteca.financeiro.cobranca.*;
-import br.pucpr.bcc.biblioteca.circulacao.*;
-import br.pucpr.bcc.biblioteca.eventos.*;
-import br.pucpr.bcc.biblioteca.persistencia.*;
+import br.pucpr.bcc.biblioteca.r02_strategy.*;
+import br.pucpr.bcc.biblioteca.r03_adapter.*;
+import br.pucpr.bcc.biblioteca.r04_facade.*;
+import br.pucpr.bcc.biblioteca.r05_observer.*;
+import br.pucpr.bcc.biblioteca.r08_abstract_factory.*;
 import br.pucpr.bcc.biblioteca.tratadores.*;
 import org.junit.jupiter.api.Test;
 import java.nio.file.*;
@@ -39,19 +38,19 @@ class MysqlIntegracaoIT {
             }
             assertSame(uow, f.acervoDeLivros().unidadeTrabalho());
             assertSame(uow, f.movimentacao().unidadeTrabalho());
-            assertSame(uow, f.grupos().unidadeTrabalho());
+            assertSame(uow, f.relacionamento().unidadeTrabalho());
             int id = ThreadLocalRandom.current().nextInt(100_000_000, 900_000_000);
             for (int i = 0; i < 10; i++) assertTrue(f.acervoDeLivros().consultarLivro(id+i).isEmpty());
             String cpf = String.format("%011d", id);
-            assertTrue(f.grupos().consultarPessoa(cpf).isEmpty());
-            assertTrue(f.grupos().consultarEstudante(id).isEmpty());
-            var cadastro = new TratadorDeCadastro(f.acervoDeLivros(), f.grupos());
+            assertTrue(f.relacionamento().consultarPessoa(cpf).isEmpty());
+            assertTrue(f.relacionamento().consultarEstudante(id).isEmpty());
+            var cadastro = new TratadorDeCadastro(f.acervoDeLivros(), f.relacionamento());
             cadastro.inserirPessoa("Validação", "GoF", cpf);
             cadastro.inserirEstudante(cpf, id, "IT-"+id);
             cadastro.inserirLivro(id, "Validação JDBC");
             var publicador = new PublicadorDevolucao();
-            var facade = new CirculacaoFacade(uow, f.acervoDeLivros(), f.movimentacao(), f.grupos(), publicador);
-            var devolucao = new TratadorDeDevolucao(facade, f.movimentacao(), f.grupos(),
+            var facade = new CirculacaoFacade(uow, f.acervoDeLivros(), f.movimentacao(), f.relacionamento(), publicador);
+            var devolucao = new TratadorDeDevolucao(facade, f.movimentacao(), f.relacionamento(),
                     new ConfiguracaoMulta(new MultaOriginalStrategy()), new BancoAAdapter(new BancoASimulado()));
             LocalDate data = LocalDate.of(2026,11,20);
             assertTrue(facade.solicitarReserva(id,id,data).sucesso());
@@ -72,16 +71,16 @@ class MysqlIntegracaoIT {
                 st.setInt(1,id); try(ResultSet rs=st.executeQuery()) {rs.next();assertEquals(1,rs.getInt(1));}
             }
             uow.iniciar();
-            f.acervoDeLivros().inserirLivro(new Livro(id+1,"Desfazer"));
+            f.acervoDeLivros().salvar(new Livro(id+1,"Desfazer"));
             uow.rollback();
             assertTrue(f.acervoDeLivros().consultarLivro(id+1).isEmpty());
             int n=2;
             for(String estado:new String[]{"LIVRE","RESERVADO","EMPRESTADO","RENOVADO","DEVOLVIDO","REPARANDO","INCINERADO"}) {
                 Livro livro=new Livro(id+n++,"Estado "+estado); livro.reconstituirEstadoPorNome(estado);
-                f.acervoDeLivros().inserirLivro(livro);
+                f.acervoDeLivros().salvar(livro);
                 assertEquals(estado,f.acervoDeLivros().consultarLivro(livro.getIdLivro()).orElseThrow().getEstadoNome());
             }
-            assertThrows(IllegalStateException.class,()->f.grupos().excluirEstudante(id));
+            assertThrows(IllegalStateException.class,()->f.relacionamento().excluirEstudante(id));
             assertThrows(IllegalStateException.class,()->f.acervoDeLivros().excluirLivro(id));
             assertThrows(IllegalStateException.class,()->f.movimentacao().inserirReserva(new Reserva(id+1,id,data)));
             // Outra conexão comprova que os commits ficaram visíveis fora da UOW original.

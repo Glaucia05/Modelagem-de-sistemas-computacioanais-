@@ -3,12 +3,12 @@ package br.pucpr.bcc.biblioteca.tratadores;
 import br.pucpr.bcc.biblioteca.dominio.BoletoMulta;
 import br.pucpr.bcc.biblioteca.dominio.Devolucao;
 import br.pucpr.bcc.biblioteca.interfaces.iDevolucao;
-import br.pucpr.bcc.biblioteca.financeiro.multa.ConfiguracaoMulta;
-import br.pucpr.bcc.biblioteca.financeiro.cobranca.CobrancaInstitucional;
-import br.pucpr.bcc.biblioteca.circulacao.CirculacaoFacade;
-import br.pucpr.bcc.biblioteca.circulacao.ComprovanteOperacao;
-import br.pucpr.bcc.biblioteca.persistencia.Movimentacao;
-import br.pucpr.bcc.biblioteca.persistencia.GruposDoSistema;
+import br.pucpr.bcc.biblioteca.r02_strategy.ConfiguracaoMulta;
+import br.pucpr.bcc.biblioteca.r03_adapter.CobrancaInstitucional;
+import br.pucpr.bcc.biblioteca.r04_facade.CirculacaoFacade;
+import br.pucpr.bcc.biblioteca.r04_facade.ComprovanteOperacao;
+import br.pucpr.bcc.biblioteca.r08_abstract_factory.Movimentacao;
+import br.pucpr.bcc.biblioteca.r08_abstract_factory.Relacionamento;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,31 +17,39 @@ import java.util.Optional;
 public class TratadorDeDevolucao implements iDevolucao {
     private final CirculacaoFacade facade;
     private final Movimentacao movimentacao;
-    private final GruposDoSistema grupos;
+    private final Relacionamento relacionamento;
     private final ConfiguracaoMulta configuracaoMulta;
     private final CobrancaInstitucional cobranca;
 
     public TratadorDeDevolucao(
             CirculacaoFacade facade,
             Movimentacao movimentacao,
-            GruposDoSistema grupos,
+            Relacionamento relacionamento,
             ConfiguracaoMulta configuracaoMulta,
             CobrancaInstitucional cobranca
     ) {
         this.facade = facade;
         this.movimentacao = movimentacao;
-        this.grupos = grupos;
+        this.relacionamento = relacionamento;
         this.configuracaoMulta = configuracaoMulta;
         this.cobranca = cobranca;
     }
 
     public void definirPoliticaMulta(String nome) {
         configuracaoMulta.definirPolitica(switch (nome.toLowerCase(java.util.Locale.ROOT)) {
-            case "original" -> new br.pucpr.bcc.biblioteca.financeiro.multa.MultaOriginalStrategy();
-            case "teto" -> new br.pucpr.bcc.biblioteca.financeiro.multa.MultaTetoVinteStrategy();
-            case "tolerancia" -> new br.pucpr.bcc.biblioteca.financeiro.multa.MultaToleranciaDoisDiasStrategy();
+            case "original" -> new br.pucpr.bcc.biblioteca.r02_strategy.MultaOriginalStrategy();
+            case "teto" -> new br.pucpr.bcc.biblioteca.r02_strategy.MultaTetoVinteStrategy();
+            case "tolerancia" -> new br.pucpr.bcc.biblioteca.r02_strategy.MultaToleranciaDoisDiasStrategy();
             default -> throw new IllegalArgumentException("Política deve ser original, teto ou tolerancia");
         });
+    }
+
+    /**
+     * Operação {@code calcularMulta(dataVencimento, dataDevolucao)} do Diagrama de Classes de Projeto.
+     * Usa a política vigente (Strategy, R02); o valor monetário é BigDecimal, não double.
+     */
+    public BigDecimal calcularMulta(LocalDate dataVencimento, LocalDate dataDevolucao) {
+        return configuracaoMulta.getPoliticaVigente().calcular(dataVencimento, dataDevolucao);
     }
 
     @Override
@@ -61,7 +69,7 @@ public class TratadorDeDevolucao implements iDevolucao {
             return Optional.empty();
         }
 
-        String cpf = grupos.consultarEstudante(idEstudante).map(e -> e.cpf()).orElseThrow(() -> new IllegalStateException("Estudante não encontrado para emissão"));
+        String cpf = relacionamento.consultarEstudante(idEstudante).map(e -> e.cpf()).orElseThrow(() -> new IllegalStateException("Estudante não encontrado para emissão"));
         String idCobranca = cobranca.registrarCobranca("DEV-" + idLivro + "-" + idEstudante, cpf, valor);
         BoletoMulta boleto = new BoletoMulta(
                 idCobranca,
