@@ -98,11 +98,11 @@ mvn compile exec:java "-Dexec.args=menu memoria B"
 mvn compile exec:java "-Dexec.args=menu prod A"
 ```
 
-| Posição | Significado | Valores |
-|---|---|---|
-| 1 | Modo | `demo`; `menu` para uso interativo |
-| 2 | Família de persistência | `memoria` ou `test`; `prod` ou `mysql` |
-| 3 | Banco simulado | `A` ou `B` |
+| Posição | Significado             | Valores                                |
+| ------- | ----------------------- | -------------------------------------- |
+| 1       | Modo                    | `demo`; `menu` para uso interativo     |
+| 2       | Família de persistência | `memoria` ou `test`; `prod` ou `mysql` |
+| 3       | Banco simulado          | `A` ou `B`                             |
 
 Os padrões, quando omitidos, são menu, memória e A. A família é escolhida uma vez por `ProvedorPersistencia.criarPorPerfil`. Os bancos A/B continuam simulados mesmo em `prod`; `prod` altera a persistência, não habilita um banco financeiro real.
 
@@ -170,7 +170,7 @@ Além de `target/surefire-reports`, confira `target/failsafe-reports`. Para cons
 
 Inicie `menu memoria A` e siga:
 
-1. **Opção 2:** informe CPF fictício com 11 dígitos (por exemplo `11122233344`), nome, sobrenome, ID estudante `101`, matrícula `MAT-101`, ID livro `1` e título `Design Patterns`.
+1. **Opção 2 (cadastros):** cada cadastro é feito separadamente. Escolha o cadastro (`1` Pessoa, `2` Estudante, `3` Atendente, `4` Livro) e a operação (`1` Inserir, `2` Consultar, `3` Atualizar, `4` Excluir). Para o fluxo, faça três inserções: Pessoa com CPF fictício de 11 dígitos (por exemplo `11122233344`), nome e sobrenome; Estudante com ID `101`, o mesmo CPF e matrícula `MAT-101`; Livro com ID `1` e título `Design Patterns`. Inserir Estudante ou Atendente com CPF sem Pessoa cadastrada deve ser recusado.
 2. **Opção 3:** informe livro `1` e estudante `101`. O comprovante deve indicar `sucesso=true` e `RESERVADO`.
 3. **Opção 4:** informe os mesmos IDs. O vencimento fica sete dias após hoje e o estado passa a `EMPRESTADO`.
 4. **Opção 5:** informe os mesmos IDs. A renovação acrescenta 30 dias ao vencimento, passando a `RENOVADO`. A segunda renovação também é permitida; a terceira deve retornar `sucesso=false` sem aumentar a data.
@@ -200,19 +200,19 @@ Após efetivar o empréstimo, a reserva correspondente foi removida. Renovar atu
 
 ## 13. Problemas comuns
 
-| Sintoma | Ação |
-|---|---|
-| `mvn` não reconhecido | Instalar/configurar Maven no PATH; abrir outro terminal; confirmar `mvn -version` |
-| `release version 17 not supported` | Corrigir o JDK usado pelo Maven, não somente o Project SDK da IDE |
-| `There is no POM in this directory` | Entrar em `Projetos/Livraria/biblioteca-gof` ou utilizar `-f` |
-| Erro de resolução de plugins/dependências | Verificar acesso ao Maven Central e configuração de rede; executar antes da apresentação |
-| `Access denied` | Conferir DB_USER, DB_PASS e permissões do usuário para a base; não alterar autenticação global para contornar |
-| `Unknown database` ou tabela ausente | Criar a base correta e executar os blocos de schema correspondentes |
-| `Communications link failure` | Conferir serviço MySQL, host, porta e URL; o modo memória não precisa desse serviço |
-| Erro de FK | Cadastrar Pessoa antes de Estudante; cadastrar Livro/Estudante antes da movimentação; não remover entidades com histórico |
-| Reserva recusada após devolução | Inspecionar pela opção 7 antes de reservar novamente |
-| Demo não gera multa | Usar o comando documentado em processo novo; a versão atual simula 42 dias após o início |
-| Texto acentuado aparece incorreto no terminal | Utilizar terminal UTF-8; no Windows, testar `chcp 65001` antes da execução |
-| Mensagens de falha SMTP/rollback durante testes | São falhas injetadas pelos testes; confira o resumo JUnit e `BUILD SUCCESS` |
+| Sintoma                                         | Ação                                                                                                                      |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `mvn` não reconhecido                           | Instalar/configurar Maven no PATH; abrir outro terminal; confirmar `mvn -version`                                         |
+| `release version 17 not supported`              | Corrigir o JDK usado pelo Maven, não somente o Project SDK da IDE                                                         |
+| `There is no POM in this directory`             | Entrar em `Projetos/Livraria/biblioteca-gof` ou utilizar `-f`                                                             |
+| Erro de resolução de plugins/dependências       | Verificar acesso ao Maven Central e configuração de rede; executar antes da apresentação                                  |
+| `Access denied`                                 | Conferir DB_USER, DB_PASS e permissões do usuário para a base; não alterar autenticação global para contornar             |
+| `Unknown database` ou tabela ausente            | Criar a base correta e executar os blocos de schema correspondentes                                                       |
+| `Communications link failure`                   | Conferir serviço MySQL, host, porta e URL; o modo memória não precisa desse serviço                                       |
+| Erro de FK                                      | Cadastrar Pessoa antes de Estudante; cadastrar Livro/Estudante antes da movimentação; não remover entidades com histórico |
+| Reserva recusada após devolução                 | Inspecionar pela opção 7 antes de reservar novamente                                                                      |
+| Demo não gera multa                             | Usar o comando documentado em processo novo; a versão atual simula 42 dias após o início                                  |
+| Texto acentuado aparece incorreto no terminal   | Utilizar terminal UTF-8; no Windows, testar `chcp 65001` antes da execução                                                |
+| Mensagens de falha SMTP/rollback durante testes | São falhas injetadas pelos testes; confira o resumo JUnit e `BUILD SUCCESS`                                               |
 
 Os arquivos `.asta` e seus PDFs ficam em `docs/uml/`. Consulte o README desse diretório para distinguir o original preservado da revisão da implementação. Os resultados finais e limites estão no README principal.

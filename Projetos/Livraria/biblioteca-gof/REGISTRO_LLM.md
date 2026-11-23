@@ -1,18 +1,19 @@
 # Registro de Uso de LLMs
 
 ## Ferramentas e Modelos Utilizados
+
 - **Modelo:** Gemini (Google)
 - **Finalidade:** Apoio na estruturação do projeto Maven em Java 17, geração das classes dos 10 padrões GoF, implementação das interfaces do diagrama de componentes (`iLivro`, `iPessoa`, `iEstudante`, `iAtendente`, `iEmprestimo`, `iDevolucao`), persistência JDBC MySQL com `schema.sql`, suíte de testes JUnit 5 e documentação técnica.
 
 ## Principais Pedidos e Decisões da Equipe
-1. **Arquitetura e coerência com os diagramas UML:**
-   - *Pedido:* Gerar o código Java 17 alinhado aos diagramas UML da equipe (máquina de estados de `Livro`, diagrama de componentes, tratadores e fluxos de atividade/sequência).
-   - *Aceito:* Preservação das interfaces `iLivro`, `iPessoa`, `iEstudante`, `iAtendente`, `iEmprestimo` e `iDevolucao`, delegação dos tratadores para `CirculacaoFacade` e `RotinaCadastroTemplate`, e isolamento total de regras de domínio na interface `ConsoleApp`.
-   - *Ajustado/Verificado:* Implementada guarda `numRenovacoes < 2` nos estados `EMPRESTADO` e `RENOVADO`, transição `REPARANDO -> INCINERADO` por laudo irrecuperável, proteção contra dupla quitação nos adaptadores bancários e persistência JDBC transacional na `MysqlPersistenciaFactory`.
-2. **Suíte de testes automatizados (`RequisitosGoFTest`):**
-   - *Pedido:* Criar testes automatizados JUnit 5 cobrindo os 10 cenários de verificação (`R01` a `R10`).
-   - *Aceito e validado:* Execução automatizada em um único comando (`mvn clean test`).
 
+1. **Arquitetura e coerência com os diagramas UML:**
+   - _Pedido:_ Gerar o código Java 17 alinhado aos diagramas UML da equipe (máquina de estados de `Livro`, diagrama de componentes, tratadores e fluxos de atividade/sequência).
+   - _Aceito:_ Preservação das interfaces `iLivro`, `iPessoa`, `iEstudante`, `iAtendente`, `iEmprestimo` e `iDevolucao`, delegação dos tratadores para `CirculacaoFacade` e `RotinaCadastroTemplate`, e isolamento total de regras de domínio na interface `ConsoleApp`.
+   - _Ajustado/Verificado:_ Implementada guarda `numRenovacoes < 2` nos estados `EMPRESTADO` e `RENOVADO`, transição `REPARANDO -> INCINERADO` por laudo irrecuperável, proteção contra dupla quitação nos adaptadores bancários e persistência JDBC transacional na `MysqlPersistenciaFactory`.
+2. **Suíte de testes automatizados (`RequisitosGoFTest`):**
+   - _Pedido:_ Criar testes automatizados JUnit 5 cobrindo os 10 cenários de verificação (`R01` a `R10`).
+   - _Aceito e validado:_ Execução automatizada em um único comando (`mvn clean test`).
 
 ## Auditoria e correções com Codex — 21/11/2026
 
@@ -26,7 +27,6 @@
 - **Sugestões descartadas/não implementadas:** reescrever o projeto, substituir tratadores, adicionar frameworks de aplicação, afrouxar expectativas para ocultar falhas, exigir MySQL para testes unitários, inventar diagramas GoF como se fossem os originais, alterar a regra de duas renovações para acompanhar a guarda incorreta do Astah, executar migração/desduplicação destrutiva ou realizar operações Git de publicação.
 - **Evoluções documentadas, sem implantação:** homologação em MySQL real; migração de bases existentes após análise; chave durável de comandos e emissão de boletos; webhook persistente, conciliação bancária/outbox e retentativas; reconciliação dos modelos UML e exportação em PDF. Essas mudanças excedem os ajustes locais simples ou dependem de dados/modelos revisados pela equipe.
 - **Preservação:** registros anteriores mantidos; pacotes e nomes públicos existentes preservados; interfaces só receberam extensões compatíveis para identidade da unidade/fechamento. Nenhum banco externo foi alterado e nenhum diagrama foi salvo/modificado. O relatório completo, matriz, evidências e pendências estão em `docs/AUDITORIA_21-11.md`.
-
 
 ### Revisão, correção e finalização — Sérgio Calazans
 
@@ -80,3 +80,11 @@ Etapa de 21/11/2026. O nome de modelo acima registra a informação do usuário;
 **Verificado:** compilação com `--release 17` sem erros; 31 testes de domínio, regressão e alinhamento UML aprovados (os 8 testes JDBC/H2 não puderam ser executados no ambiente da ferramenta, sem acesso ao Maven Central, e devem ser confirmados com `mvn clean test`); demonstração com multa de R$ 5,00; conferência visual dos 21 diagramas do `Diagramas-GoF.pdf`, todos completos.
 
 **Alterações:** somente documentação — aviso de registro histórico e atualização de duas frases desatualizadas em `docs/AUDITORIA_21-11.md`; ajustes de consistência no README, no tutorial e neste registro. Nenhum código, teste ou modelo foi alterado. Commits e publicação ficaram a cargo da equipe.
+
+## 23/11/2026 — Cadastros separados no menu (Claude, Anthropic)
+
+**Pedido:** a equipe observou que a opção 2 do menu cadastrava Pessoa, Estudante e Livro de uma só vez, sem cadastro de Atendente, e pediu a correção conforme os modelos.
+
+**Alteração:** somente em `ui/ConsoleApp.java`. A opção 2 passou a manter cada cadastro separadamente (Pessoa, Estudante, Atendente e Livro; inserir, consultar, atualizar e excluir), seguindo os casos de uso Manter Pessoa, Manter Estudante, Manter Atendente e Manter Livro. Os tratadores e os templates (R07) não foram alterados; a regra de que Estudante e Atendente exigem a Pessoa cadastrada continua no template.
+
+**Validação:** compilação com `--release 17`; 31 testes de domínio, regressão e alinhamento UML aprovados; menu exercitado por entrada de terminal (inserções, consulta, atualização, exclusão, recusa de Estudante sem Pessoa e de exclusão de livro emprestado). Os testes JDBC/H2 devem ser confirmados com `mvn clean test`. README e tutorial atualizados.
