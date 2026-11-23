@@ -164,6 +164,45 @@ class AuditoriaRegressaoTest {
         assertEquals(new BigDecimal("0.00"),new MultaToleranciaDoisDiasStrategy().calcular(base,base.plusDays(2)));
     }
 
+    @Test void R02_R03_multaUnicaPorDevolucaoEPagamento() {
+        emprestar();
+        assertTrue(devolucao.registrarDevolucao(1,101,base.plusDays(12)).sucesso());
+        BoletoMulta boleto = devolucao.emitirBoletoMulta(1,101).orElseThrow();
+        config.definirPolitica(new MultaToleranciaDoisDiasStrategy());
+        assertEquals(boleto, devolucao.emitirBoletoMulta(1,101).orElseThrow());
+        var pagamento = new BancoASimulado.NotificacaoBancoA(boleto.idCobranca(), 500L, "LIQUIDADO");
+        assertTrue(devolucao.registrarPagamento(pagamento));
+        assertFalse(devolucao.registrarPagamento(pagamento));
+        assertEquals("QUITADO", devolucao.emitirBoletoMulta(1,101).orElseThrow().situacao());
+        assertEquals(1, f.movimentacao().listarBoletos().size());
+        assertTrue(facade.inspecionarLivro(1,true).sucesso());
+        LocalDate depois = base.plusDays(20);
+        assertTrue(facade.solicitarReserva(1,101,depois).sucesso());
+        assertTrue(facade.efetivarEmprestimo(1,101,depois,7).sucesso());
+        assertTrue(devolucao.registrarDevolucao(1,101,depois.plusDays(12)).sucesso());
+        BoletoMulta novo = devolucao.emitirBoletoMulta(1,101).orElseThrow();
+        assertNotEquals(boleto.idDevolucao(), novo.idDevolucao());
+        assertEquals(new BigDecimal("3.00"), novo.valor());
+        assertEquals(2, f.movimentacao().listarBoletos().size());
+    }
+
+    @Test void R09_R10_tratadorIntegraConsultaEHierarquia() {
+        var medicao = new MedicaoConsultaDecorator(new CacheMetadadosDecorator(new ConsultaAcervoBase(f.acervoDeLivros())));
+        var tratador = new TratadorDeAcervo(f.acervoDeLivros(), medicao);
+        assertTrue(tratador.consultarMetadados(1).isPresent());
+        assertTrue(tratador.consultarMetadados(1).isPresent());
+        assertEquals(2, medicao.getTotalMedicoes());
+        tratador.criarGrupo("Unidade Central", "A");
+        tratador.criarGrupo("Unidade Central", "B");
+        tratador.adicionarLivro("A", 1);
+        emprestar();
+        assertFalse(tratador.podeReservar(1));
+        assertTrue(tratador.moverLivro(1, "A", "B"));
+        assertEquals(List.of(1), tratador.listarGrupos().get("B"));
+        assertEquals(1, tratador.contarLivros());
+        assertEquals("EMPRESTADO", f.acervoDeLivros().consultarLivro(1).orElseThrow().getEstadoNome());
+    }
+
     @Test void R03_converteDocumentosERejeitaQuitacaoDesconhecidaOuValorDivergente() throws Exception {
         AtomicReference<String> docA = new AtomicReference<>();
         AtomicReference<String> docB = new AtomicReference<>();

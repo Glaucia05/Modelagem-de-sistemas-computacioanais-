@@ -30,6 +30,25 @@ class PersistenciaJdbcTest {
         f.acervoDeLivros().salvar(new Livro(1,"GoF"));
     }
     @AfterEach void fechar() throws Exception { conexao.close(); }
+    @Test void R02_R03_boletoUnicoEQuitadoNoJdbc() {
+        f.relacionamento().inserirPessoa(new Pessoa("Beatriz","Silva","12345678900"));
+        f.relacionamento().inserirEstudante(new Estudante(102,"12345678900","M102"));
+        var facade = new br.pucpr.bcc.biblioteca.r04_facade.CirculacaoFacade(f.unidadeTrabalho(), f.acervoDeLivros(), f.movimentacao(), f.relacionamento(), new br.pucpr.bcc.biblioteca.r05_observer.PublicadorDevolucao());
+        var tratador = new br.pucpr.bcc.biblioteca.tratadores.TratadorDeDevolucao(facade, f.movimentacao(), f.relacionamento(),
+                new br.pucpr.bcc.biblioteca.r02_strategy.ConfiguracaoMulta(new br.pucpr.bcc.biblioteca.r02_strategy.MultaOriginalStrategy()),
+                new br.pucpr.bcc.biblioteca.r03_adapter.BancoBAdapter(new br.pucpr.bcc.biblioteca.r03_adapter.BancoBSimulado()));
+        LocalDate inicio = LocalDate.of(2026,11,1);
+        assertTrue(facade.solicitarReserva(1,102,inicio).sucesso());
+        assertTrue(facade.efetivarEmprestimo(1,102,inicio,7).sucesso());
+        assertTrue(tratador.registrarDevolucao(1,102,inicio.plusDays(12)).sucesso());
+        var boleto = tratador.emitirBoletoMulta(1,102).orElseThrow();
+        assertEquals(boleto, tratador.emitirBoletoMulta(1,102).orElseThrow());
+        var pagamento = new br.pucpr.bcc.biblioteca.r03_adapter.BancoBSimulado.PayloadBancoB(boleto.idCobranca(), 5.00, "PAGO");
+        assertTrue(tratador.registrarPagamento(pagamento));
+        assertFalse(tratador.registrarPagamento(pagamento));
+        assertEquals("QUITADO", f.movimentacao().listarBoletos().get(0).situacao());
+        assertEquals(1, f.movimentacao().listarBoletos().size());
+    }
     @Test void R08_renovacaoAtualizaLinhaEDevolucaoEncerraEmprestimo() throws Exception {
         LocalDate inicio=LocalDate.of(2026,11,1);
         Emprestimo emp=new Emprestimo(1,101,inicio,inicio.plusDays(7));
