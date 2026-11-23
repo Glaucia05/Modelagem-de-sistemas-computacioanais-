@@ -11,7 +11,7 @@ O original não continha os dez diagramas de classes dos padrões GoF. A revisã
 
 ## Escopo e limites
 
-- Classes, heranças, realizações e associações são extraídas por reflexão das classes compiladas. Cada visão mostra até três operações por classe; `arg1`, `arg2` etc. indicam parâmetros cujos nomes não são conservados na compilação.
+- Classes, heranças, realizações e associações são extraídas por reflexão das classes compiladas. As visões mostram operações representativas, com destaque para as quatro criações da Abstract Factory e a movimentação do Composite; `arg1`, `arg2` etc. indicam parâmetros cujos nomes não são conservados na compilação.
 - Os diagramas de sequência são sínteses dos métodos e dos testes. Não representam todas as ativações, retornos ou alternativas possíveis.
 - Não é engenharia reversa completa. A equipe deve revisar os diagramas antes da arguição.
 
@@ -31,6 +31,8 @@ O original não continha os dez diagramas de classes dos padrões GoF. A revisã
 | Exclusão de Livro | Flag `excluido`, sem oitavo estado | Bloqueia a reserva e preserva os sete estados |
 
 ## Regenerar os modelos
+
+Os arquivos .asta e PDF foram regenerados em 22/11. O gerador inclui os nomes atuais do código, as famílias concretas de persistência e o tratador do acervo. Após qualquer alteração no gerador ou no código, execute os comandos abaixo e confira visualmente os 21 diagramas antes da entrega.
 
 Na pasta `biblioteca-gof`, com JDK 17+, Maven, Astah UML instalado e licenciado, e Python com Pillow e reportlab (ajuste `$astahDir` ao seu caminho):
 
