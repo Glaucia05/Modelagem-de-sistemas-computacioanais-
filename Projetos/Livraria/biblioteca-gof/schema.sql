@@ -63,11 +63,13 @@ CREATE TABLE IF NOT EXISTS devolucoes (
 
 CREATE TABLE IF NOT EXISTS boletos_multa (
     id_cobranca VARCHAR(60) PRIMARY KEY,
+    id_devolucao INT NOT NULL UNIQUE,
     id_livro INT NOT NULL,
     id_estudante INT NOT NULL,
     valor DECIMAL(10, 2) NOT NULL,
     politica_aplicada VARCHAR(60) NOT NULL,
     situacao VARCHAR(30) NOT NULL,
+    CONSTRAINT fk_boleto_devolucao FOREIGN KEY (id_devolucao) REFERENCES devolucoes(id_devolucao),
     CONSTRAINT fk_boleto_livro FOREIGN KEY (id_livro) REFERENCES livros(id_livro),
     CONSTRAINT fk_boleto_estudante FOREIGN KEY (id_estudante) REFERENCES estudantes(id_estudante)
 );

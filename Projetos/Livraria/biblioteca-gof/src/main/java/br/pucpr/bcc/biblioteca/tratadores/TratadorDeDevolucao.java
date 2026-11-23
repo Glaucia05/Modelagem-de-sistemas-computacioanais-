@@ -59,10 +59,19 @@ public class TratadorDeDevolucao implements iDevolucao {
 
     @Override
     public Optional<BoletoMulta> emitirBoletoMulta(int idLivro, int idEstudante) {
+        synchronized (movimentacao.unidadeTrabalho() == null ? movimentacao : movimentacao.unidadeTrabalho()) {
+            return emitirMulta(idLivro, idEstudante);
+        }
+    }
+
+    private Optional<BoletoMulta> emitirMulta(int idLivro, int idEstudante) {
         Optional<Devolucao> optDev = movimentacao.consultarDevolucao(idLivro, idEstudante);
         if (optDev.isEmpty()) return Optional.empty();
 
         Devolucao dev = optDev.get();
+        Optional<BoletoMulta> existente = movimentacao.listarBoletos().stream()
+                .filter(b -> b.idDevolucao() == dev.getIdDevolucao()).findFirst();
+        if (existente.isPresent()) return existente;
         var politica = configuracaoMulta.getPoliticaVigente();
         BigDecimal valor = politica.calcular(dev.getDataVencimento(), dev.getDataDevolucao());
         if (valor.compareTo(BigDecimal.ZERO) <= 0) {
@@ -70,9 +79,10 @@ public class TratadorDeDevolucao implements iDevolucao {
         }
 
         String cpf = relacionamento.consultarEstudante(idEstudante).map(e -> e.cpf()).orElseThrow(() -> new IllegalStateException("Estudante não encontrado para emissão"));
-        String idCobranca = cobranca.registrarCobranca("DEV-" + idLivro + "-" + idEstudante, cpf, valor);
+        String idCobranca = cobranca.registrarCobranca("DEV-" + dev.getIdDevolucao(), cpf, valor);
         BoletoMulta boleto = new BoletoMulta(
                 idCobranca,
+                dev.getIdDevolucao(),
                 idLivro,
                 idEstudante,
                 valor,
@@ -81,6 +91,23 @@ public class TratadorDeDevolucao implements iDevolucao {
         );
         movimentacao.salvarBoleto(boleto);
         return Optional.of(boleto);
+    }
+
+    public boolean registrarPagamento(Object notificacaoBruta) {
+        synchronized (movimentacao.unidadeTrabalho() == null ? movimentacao : movimentacao.unidadeTrabalho()) {
+            var notificacao = cobranca.processarNotificacao(notificacaoBruta);
+            if (notificacao.isEmpty() || !"QUITADO".equals(notificacao.get().situacaoPadronizada())) return false;
+            var pagamento = notificacao.get();
+            for (BoletoMulta boleto : movimentacao.listarBoletos()) {
+                if (boleto.idCobranca().equals(pagamento.idCobranca()) && !"QUITADO".equals(boleto.situacao())
+                        && boleto.valor().compareTo(pagamento.valorPago()) == 0) {
+                    movimentacao.salvarBoleto(new BoletoMulta(boleto.idCobranca(), boleto.idDevolucao(), boleto.idLivro(),
+                            boleto.idEstudante(), boleto.valor(), boleto.politicaAplicada(), "QUITADO"));
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     @Override

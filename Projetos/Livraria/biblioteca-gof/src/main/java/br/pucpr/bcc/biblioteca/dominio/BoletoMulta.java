@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public record BoletoMulta(
         String idCobranca,
+        long idDevolucao,
         int idLivro,
         int idEstudante,
         BigDecimal valor,

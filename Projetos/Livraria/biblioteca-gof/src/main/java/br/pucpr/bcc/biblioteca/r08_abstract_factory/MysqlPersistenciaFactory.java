@@ -347,13 +347,13 @@ public class MysqlPersistenciaFactory implements PersistenciaFactory {
         public Optional<Devolucao> consultarDevolucao(int idLivro, int idEstudante) {
             synchronized (uow) {
 
-                String sql = "SELECT data_devolucao, data_vencimento FROM devolucoes WHERE id_livro = ? AND id_estudante = ? ORDER BY id_devolucao DESC LIMIT 1";
+                String sql = "SELECT id_devolucao, data_devolucao, data_vencimento FROM devolucoes WHERE id_livro = ? AND id_estudante = ? ORDER BY id_devolucao DESC LIMIT 1";
                 try (PreparedStatement ps = uow.getConnection().prepareStatement(sql)) {
                     ps.setInt(1, idLivro);
                     ps.setInt(2, idEstudante);
                     try (ResultSet rs = ps.executeQuery()) {
                         if (!rs.next()) return Optional.empty();
-                        return Optional.of(new Devolucao(idLivro, idEstudante,
+                        return Optional.of(new Devolucao(rs.getLong("id_devolucao"), idLivro, idEstudante,
                         rs.getDate("data_devolucao").toLocalDate(),
                         rs.getDate("data_vencimento").toLocalDate()));
                     }
@@ -368,14 +368,25 @@ public class MysqlPersistenciaFactory implements PersistenciaFactory {
         public void salvarBoleto(BoletoMulta b) {
             synchronized (uow) {
 
-                String sql = "INSERT INTO boletos_multa (id_cobranca, id_livro, id_estudante, valor, politica_aplicada, situacao) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE situacao=VALUES(situacao)";
+                if (listarBoletos().stream().anyMatch(existente -> existente.idCobranca().equals(b.idCobranca()))) {
+                    try (PreparedStatement ps = uow.getConnection().prepareStatement("UPDATE boletos_multa SET situacao=? WHERE id_cobranca=?")) {
+                        ps.setString(1, b.situacao());
+                        ps.setString(2, b.idCobranca());
+                        ps.executeUpdate();
+                        return;
+                    } catch (SQLException e) {
+                        throw new IllegalStateException("Erro JDBC ao atualizar Boleto: " + e.getMessage(), e);
+                    }
+                }
+                String sql = "INSERT INTO boletos_multa (id_cobranca, id_devolucao, id_livro, id_estudante, valor, politica_aplicada, situacao) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement ps = uow.getConnection().prepareStatement(sql)) {
                     ps.setString(1, b.idCobranca());
-                    ps.setInt(2, b.idLivro());
-                    ps.setInt(3, b.idEstudante());
-                    ps.setBigDecimal(4, b.valor());
-                    ps.setString(5, b.politicaAplicada());
-                    ps.setString(6, b.situacao());
+                    ps.setLong(2, b.idDevolucao());
+                    ps.setInt(3, b.idLivro());
+                    ps.setInt(4, b.idEstudante());
+                    ps.setBigDecimal(5, b.valor());
+                    ps.setString(6, b.politicaAplicada());
+                    ps.setString(7, b.situacao());
                     ps.executeUpdate();
                 } catch (SQLException e) {
                     throw new IllegalStateException("Erro JDBC ao salvar Boleto: " + e.getMessage(), e);
@@ -388,12 +399,12 @@ public class MysqlPersistenciaFactory implements PersistenciaFactory {
         public List<BoletoMulta> listarBoletos() {
             synchronized (uow) {
 
-                String sql = "SELECT id_cobranca, id_livro, id_estudante, valor, politica_aplicada, situacao FROM boletos_multa";
+                String sql = "SELECT id_cobranca, id_devolucao, id_livro, id_estudante, valor, politica_aplicada, situacao FROM boletos_multa";
                 List<BoletoMulta> lista = new ArrayList<>();
                 try (PreparedStatement ps = uow.getConnection().prepareStatement(sql);
                 ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        lista.add(new BoletoMulta(rs.getString("id_cobranca"), rs.getInt("id_livro"),
+                        lista.add(new BoletoMulta(rs.getString("id_cobranca"), rs.getLong("id_devolucao"), rs.getInt("id_livro"),
                         rs.getInt("id_estudante"), rs.getBigDecimal("valor"),
                         rs.getString("politica_aplicada"), rs.getString("situacao")));
                     }

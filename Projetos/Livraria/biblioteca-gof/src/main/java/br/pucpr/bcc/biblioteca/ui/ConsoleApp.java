@@ -7,6 +7,7 @@ import br.pucpr.bcc.biblioteca.r04_facade.CirculacaoFacade;
 import br.pucpr.bcc.biblioteca.r05_observer.*;
 import br.pucpr.bcc.biblioteca.r06_command.ExecutorComando;
 import br.pucpr.bcc.biblioteca.r08_abstract_factory.*;
+import br.pucpr.bcc.biblioteca.r09_decorator.*;
 import br.pucpr.bcc.biblioteca.tratadores.*;
 
 import java.time.LocalDate;
@@ -15,7 +16,8 @@ import java.util.UUID;
 
 public class ConsoleApp {
     public static void main(String[] args) {
-        String perfil = args.length > 1 ? args[1] : "memoria";
+        boolean demo = args.length > 0 && "demo".equalsIgnoreCase(args[0]);
+        String perfil = !demo && args.length > 1 ? args[1] : "memoria";
         try (PersistenciaFactory factory = ProvedorPersistencia.criarPorPerfil(perfil)) {
             ConfiguracaoMulta configMulta = new ConfiguracaoMulta(new MultaOriginalStrategy());
             String banco = args.length > 2 ? args[2] : "A";
@@ -45,12 +47,16 @@ public class ConsoleApp {
             iPessoa cadPessoa = tratadorCadastro;
             iEstudante cadEstudante = tratadorCadastro;
             iLivro cadLivro = tratadorCadastro;
+            ConsultaAcervoService consulta = new ConsultaAcervoBase(factory.acervoDeLivros());
+            if (Boolean.parseBoolean(System.getProperty("consulta.cache", "true"))) consulta = new CacheMetadadosDecorator(consulta);
+            if (Boolean.parseBoolean(System.getProperty("consulta.medicao", "true"))) consulta = new MedicaoConsultaDecorator(consulta);
+            TratadorDeAcervo tratadorAcervo = new TratadorDeAcervo(factory.acervoDeLivros(), consulta);
             iEmprestimo tratadorEmprestimo = new TratadorDeEmprestimo(facade, new ExecutorComando());
             TratadorDeDevolucao tratadorDevolucao = new TratadorDeDevolucao(
             facade, factory.movimentacao(), factory.relacionamento(), configMulta, cobranca
             );
 
-            if (args.length > 0 && "demo".equalsIgnoreCase(args[0])) {
+            if (demo) {
                 executarFluxoCompletoDemonstracao(cadPessoa, cadEstudante, cadLivro, tratadorEmprestimo, tratadorDevolucao);
                 return;
             }
@@ -68,6 +74,10 @@ public class ConsoleApp {
                     System.out.println("7 - Inspecionar Livro / Laudo Irrecuperável");
                     System.out.println("8 - Consultar Livro");
                     System.out.println("9 - Configurar política de multa");
+                    System.out.println("10 - Criar grupo do acervo");
+                    System.out.println("11 - Adicionar livro ao grupo");
+                    System.out.println("12 - Mover livro entre grupos");
+                    System.out.println("13 - Listar grupos do acervo");
                     System.out.println("0 - Sair");
                     System.out.print("Escolha: ");
                     if (!sc.hasNextLine()) break;
@@ -75,7 +85,7 @@ public class ConsoleApp {
 
                     try {
                         switch (op) {
-                            case "1" -> executarFluxoCompletoDemonstracao(cadPessoa, cadEstudante, cadLivro, tratadorEmprestimo, tratadorDevolucao);
+                            case "1" -> main(new String[]{"demo", "memoria", banco});
                             case "2" -> {
                                 System.out.print("CPF: "); String cpf = sc.nextLine().trim();
                                 System.out.print("Nome: "); String nome = sc.nextLine().trim();
@@ -107,8 +117,9 @@ public class ConsoleApp {
                                 System.out.print("ID Livro: "); int idLiv = Integer.parseInt(sc.nextLine().trim());
                                 System.out.print("ID Estudante: "); int idEst = Integer.parseInt(sc.nextLine().trim());
                                 System.out.print("Dias após hoje para simular devolução (ex: 12): "); int dias = Integer.parseInt(sc.nextLine().trim());
-                                System.out.println(tratadorDevolucao.registrarDevolucaoLivro(idLiv, idEst, LocalDate.now().plusDays(dias)));
-                                System.out.println("Multa: " + tratadorDevolucao.emitirBoletoMulta(idLiv, idEst).orElse(null));
+                                var resultado = tratadorDevolucao.registrarDevolucaoLivro(idLiv, idEst, LocalDate.now().plusDays(dias));
+                                System.out.println(resultado);
+                                if (resultado.sucesso()) System.out.println("Multa: " + tratadorDevolucao.emitirBoletoMulta(idLiv, idEst).orElse(null));
                             }
                             case "7" -> {
                                 System.out.print("ID Livro: "); int idLiv = Integer.parseInt(sc.nextLine().trim());
@@ -121,11 +132,33 @@ public class ConsoleApp {
                             case "8" -> {
                                 System.out.print("ID Livro: "); int idLiv = Integer.parseInt(sc.nextLine().trim());
                                 System.out.println(cadLivro.consultarLivro(idLiv).orElse(null));
+                                System.out.println("Metadados: " + tratadorAcervo.consultarMetadados(idLiv).orElse(null));
+                                System.out.println("Disponível para reserva: " + tratadorAcervo.podeReservar(idLiv));
                             }
                             case "9" -> {
                                 System.out.print("Política (original, teto, tolerancia): ");
                                 tratadorDevolucao.definirPoliticaMulta(sc.nextLine().trim());
                                 System.out.println("Política atualizada para novas emissões.");
+                            }
+                            case "10" -> {
+                                System.out.print("Grupo pai (ex: Unidade Central): "); String pai = sc.nextLine().trim();
+                                System.out.print("Nome do grupo: "); String nome = sc.nextLine().trim();
+                                tratadorAcervo.criarGrupo(pai, nome);
+                            }
+                            case "11" -> {
+                                System.out.print("Grupo: "); String grupo = sc.nextLine().trim();
+                                System.out.print("ID Livro: "); int id = Integer.parseInt(sc.nextLine().trim());
+                                tratadorAcervo.adicionarLivro(grupo, id);
+                            }
+                            case "12" -> {
+                                System.out.print("ID Livro: "); int id = Integer.parseInt(sc.nextLine().trim());
+                                System.out.print("Origem: "); String origem = sc.nextLine().trim();
+                                System.out.print("Destino: "); String destino = sc.nextLine().trim();
+                                System.out.println("Movido: " + tratadorAcervo.moverLivro(id, origem, destino));
+                            }
+                            case "13" -> {
+                                System.out.println(tratadorAcervo.listarGrupos());
+                                System.out.println("Total de livros: " + tratadorAcervo.contarLivros());
                             }
                             case "0" -> executando = false;
                             default -> System.out.println("Opção inválida.");

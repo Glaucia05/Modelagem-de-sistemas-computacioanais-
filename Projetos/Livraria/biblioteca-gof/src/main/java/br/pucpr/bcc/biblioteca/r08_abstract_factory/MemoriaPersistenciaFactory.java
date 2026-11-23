@@ -111,6 +111,7 @@ public class MemoriaPersistenciaFactory implements PersistenciaFactory {
     public static class MemoriaMovimentacao implements Movimentacao {
         private java.util.function.BiConsumer<Integer, Integer> validarVinculos = (livro, estudante) -> {};
         private long sequenciaEmprestimo;
+        private long sequenciaDevolucao;
         private final MemoriaUnidadeTrabalho uow;
         public MemoriaMovimentacao() { this(new MemoriaUnidadeTrabalho()); }
         public MemoriaMovimentacao(MemoriaUnidadeTrabalho uow) {
@@ -191,7 +192,7 @@ public class MemoriaPersistenciaFactory implements PersistenciaFactory {
         public void inserirDevolucao(Devolucao devolucao) {
             synchronized (uow) {
                 validarVinculos.accept(devolucao.getIdLivro(), devolucao.getIdEstudante());
-                devolucoes.add(devolucao);
+                devolucoes.add(new Devolucao(++sequenciaDevolucao, devolucao.getIdLivro(), devolucao.getIdEstudante(), devolucao.getDataDevolucao(), devolucao.getDataVencimento()));
             }
         }
 
@@ -210,6 +211,13 @@ public class MemoriaPersistenciaFactory implements PersistenciaFactory {
         public void salvarBoleto(BoletoMulta boleto) {
             synchronized (uow) {
                 validarVinculos.accept(boleto.idLivro(), boleto.idEstudante());
+                if (devolucoes.stream().noneMatch(d -> d.getIdDevolucao() == boleto.idDevolucao()
+                        && d.getIdLivro() == boleto.idLivro() && d.getIdEstudante() == boleto.idEstudante())) {
+                    throw new IllegalStateException("Devolução não encontrada");
+                }
+                if (boletos.stream().anyMatch(b -> b.idDevolucao() == boleto.idDevolucao() && !b.idCobranca().equals(boleto.idCobranca()))) {
+                    throw new IllegalStateException("Devolução já possui boleto");
+                }
                 boletos.removeIf(b -> b.idCobranca().equals(boleto.idCobranca())); boletos.add(boleto);
             }
         }
