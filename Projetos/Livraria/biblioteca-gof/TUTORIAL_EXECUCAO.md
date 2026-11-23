@@ -18,7 +18,7 @@ javac -version
 mvn -version
 ```
 
-O Java mostrado pelo Maven deve ser 17 ou superior. Configure `JAVA_HOME` para a pasta do JDK e inclua `JAVA_HOME/bin` e a pasta `bin` do Maven no PATH. Reinicie o terminal após alterar variáveis do sistema. A validação desta entrega usou JDK 25.0.3 e `--release 17`; não usa recursos de linguagem posteriores a Java 17.
+O Java mostrado pelo Maven deve ser 17 ou superior. Configure `JAVA_HOME` para a pasta do JDK e inclua `JAVA_HOME/bin` e a pasta `bin` do Maven no PATH. Reinicie o terminal após alterar variáveis do sistema. A validação desta entrega usou JDK 17 e JDK 25.0.3, sempre com `--release 17`; não usa recursos de linguagem posteriores a Java 17.
 
 ## 2. Abrir no IntelliJ IDEA
 
@@ -88,7 +88,7 @@ mvn clean compile exec:java "-Dexec.args=demo"
 
 Resultado esperado: reserva aceita; empréstimo com vencimento em 27/11/2026; renovação até 27/12/2026; devolução simulada em 01/01/2027; boleto de **R$ 5,00**. O livro permanece DEVOLVIDO até inspeção. As datas são fixas para tornar a demonstração reproduzível.
 
-A demo usa IDs fixos. Execute-a em um processo novo em memória; repetir a opção 1 no mesmo menu não reinicia o acervo. Não execute a demo com dados reais como forma de limpeza.
+A demo usa IDs fixos, mas cria um acervo independente em memória em cada execução. A opção 1 pode ser repetida sem alterar os dados do menu.
 
 ## 7. Modos e argumentos
 
@@ -180,7 +180,9 @@ Inicie `menu memoria A` e siga:
 8. **Opção 9:** escolha `original`, `teto` ou `tolerancia` para as próximas emissões. A tolerância cobra R$ 3,00 para cinco dias de atraso. Boletos já emitidos conservam valor/política.
 9. **Opção 0:** encerre o menu e feche a conexão da fábrica.
 
-Se uma operação falhar, confira o comprovante antes de continuar. A opção 6 também solicita emissão de boleto; evite repeti-la para a mesma devolução, pois emissão única durável não faz parte do fluxo implementado. Alterações de política são administrativas locais; não há autenticação de perfis de usuário nesta CLI acadêmica.
+Se uma operação falhar, confira o comprovante antes de continuar. A opção 6 apenas solicita emissão de boleto se a devolução for concluída; cada devolução possui um único boleto. Alterações de política são administrativas locais; não há autenticação de perfis de usuário nesta CLI acadêmica.
+
+As opções 10 a 13 permitem criar grupos e subgrupos, inserir livros cadastrados, movê-los e consultar a hierarquia mantida em memória durante a execução. A consulta de livros (opção 8) apresenta metadados e disponibilidade atual; os decoradores de cache e medição podem ser desativados com as propriedades JVM `consulta.cache` e `consulta.medicao`.
 
 ## 12. Verificações no banco
 

@@ -39,6 +39,8 @@ O repositório conta com diversos projetos modelados que abrangem diferentes con
 
 Cada projeto possui seus próprios requisitos e características, reunindo os diagramas UML mais adequados para representar seu domínio e comportamento.
 
+- [Livraria — Sistema de Gestão de Biblioteca com padrões GoF](Projetos/Livraria/biblioteca-gof/README.md)
+
 ## Ferramentas utilizadas
 
 Para a elaboração dos diagramas e organização do repositório, são utilizadas ferramentas de modelagem UML, além do **Git** e do **GitHub** para versionamento e compartilhamento dos projetos modelados.

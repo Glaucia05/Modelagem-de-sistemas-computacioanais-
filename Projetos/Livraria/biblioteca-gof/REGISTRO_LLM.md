@@ -25,7 +25,7 @@
 - **Justificativas:** cada alteração responde a inconsistência observada no código, teste reprovado ou lacuna demonstrável de integridade. A identidade persistida do empréstimo evita múltiplas linhas ativas para a mesma operação. O monitor compartilhado torna a operação local indivisível; snapshots permitem desfazer a família em memória. A medição externa vê também cache hits, mantendo cache restrito aos metadados.
 - **Sugestões descartadas/não implementadas:** reescrever o projeto, substituir tratadores, adicionar frameworks de aplicação, afrouxar expectativas para ocultar falhas, exigir MySQL para testes unitários, inventar diagramas GoF como se fossem os originais, alterar a regra de duas renovações para acompanhar a guarda incorreta do Astah, executar migração/desduplicação destrutiva ou realizar operações Git de publicação.
 - **Evoluções documentadas, sem implantação:** homologação em MySQL real; migração de bases existentes após análise; chave durável de comandos e emissão de boletos; webhook persistente, conciliação bancária/outbox e retentativas; reconciliação dos modelos UML e exportação em PDF. Essas mudanças excedem os ajustes locais simples ou dependem de dados/modelos revisados pela equipe.
-- **Preservação:** registros anteriores mantidos; pacotes e nomes públicos existentes preservados; interfaces só receberam extensões compatíveis para identidade da unidade/fechamento. Nenhum banco externo foi alterado e nenhum diagrama foi salvo/modificado. O relatório completo, matriz, evidências, pendências e perguntas de arguição estão no README.
+- **Preservação:** registros anteriores mantidos; pacotes e nomes públicos existentes preservados; interfaces só receberam extensões compatíveis para identidade da unidade/fechamento. Nenhum banco externo foi alterado e nenhum diagrama foi salvo/modificado. O relatório completo, matriz, evidências e pendências estão em `docs/AUDITORIA_21-11.md`.
 
 
 ### Revisão, correção e finalização — Sérgio Calazans
@@ -59,4 +59,24 @@ Etapa de 21/11/2026. O nome de modelo acima registra a informação do usuário;
 
 **Mantido de propósito (diferença em relação aos PDFs):** estado do `Livro` via State em vez de `alterarEstado(String)`; guarda `numRenovacoes < 2`; multa em `BigDecimal` e parâmetros extras de Command (R06) nas operações dos tratadores.
 
-**Não feito:** regenerar `Biblioteca-GoF.asta` e `Diagramas-GoF.pdf` (exigem Astah). Ver `docs/uml/README.md` para o roteiro de regeneração.
+**Não feito nesta etapa:** regenerar `Biblioteca-GoF.asta` e `Diagramas-GoF.pdf` (exigem Astah). A regeneração foi feita depois pela equipe; ver "Conferência dos modelos em 22/11".
+
+## 22/11/2026 — Revisão final (ChatGPT, OpenAI)
+
+**Pedido:** conferir o projeto com o enunciado e corrigir as pendências mantendo a arquitetura GoF e os padrões de nomes.
+
+**Alterações:** demonstração isolada em memória; emissão de boleto apenas após devolução bem-sucedida, com identidade da devolução nas duas famílias de persistência; quitação pelo tratador a partir da notificação do adaptador; integração de Decorator e Composite ao menu por meio do tratador do acervo; atualização de testes, README e gerador de modelos. O histórico anterior permanece em arquivo separado.
+
+**Validação:** 36 testes aprovados pelo grupo antes das mudanças. Com o JDK 17 e JUnit 5, 39 testes padrão aprovados, incluindo os três testes adicionais de regressão. O MySQL real não foi executado nesta etapa.
+
+**Pendências e decisões:** a revisão binária Astah e o PDF não foram regenerados neste ambiente; devem ser atualizados com a ferramenta licenciada da equipe. O schema atualizado deve ser usado em uma nova base de teste, ou migrado com análise dos registros anteriores. Sem integração com bancos reais, migração destrutiva ou alterações na branch principal.
+
+**Conferência dos modelos em 22/11:** a equipe executou o gerador no Astah UML 12, validou o arquivo .asta e exportou os 21 diagramas em PDF. Após revisão visual, foram propostas e aplicadas melhorias no gerador: inclusão dos seis repositórios concretos da Abstract Factory, destaque das operações de criação e movimentação e ajuste da disposição das classes. As regras de negócio e os 39 testes foram mantidos.
+
+## 22/11/2026 — Conferência final antes da entrega (Claude, Anthropic)
+
+**Pedido:** verificar se o trabalho estava completo e pronto para entrega.
+
+**Verificado:** compilação com `--release 17` sem erros; 31 testes de domínio, regressão e alinhamento UML aprovados (os 8 testes JDBC/H2 não puderam ser executados no ambiente da ferramenta, sem acesso ao Maven Central, e devem ser confirmados com `mvn clean test`); demonstração com multa de R$ 5,00; conferência visual dos 21 diagramas do `Diagramas-GoF.pdf`, todos completos.
+
+**Alterações:** somente documentação — aviso de registro histórico e atualização de duas frases desatualizadas em `docs/AUDITORIA_21-11.md`; ajustes de consistência no README, no tutorial e neste registro. Nenhum código, teste ou modelo foi alterado. Commits e publicação ficaram a cargo da equipe.
