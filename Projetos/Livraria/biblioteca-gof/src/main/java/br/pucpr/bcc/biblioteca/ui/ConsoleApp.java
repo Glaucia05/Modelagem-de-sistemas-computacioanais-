@@ -47,6 +47,7 @@ public class ConsoleApp {
             iPessoa cadPessoa = tratadorCadastro;
             iEstudante cadEstudante = tratadorCadastro;
             iLivro cadLivro = tratadorCadastro;
+            iAtendente cadAtendente = tratadorCadastro;
             ConsultaAcervoService consulta = new ConsultaAcervoBase(factory.acervoDeLivros());
             if (Boolean.parseBoolean(System.getProperty("consulta.cache", "true"))) consulta = new CacheMetadadosDecorator(consulta);
             if (Boolean.parseBoolean(System.getProperty("consulta.medicao", "true"))) consulta = new MedicaoConsultaDecorator(consulta);
@@ -66,7 +67,7 @@ public class ConsoleApp {
                 while (executando) {
                     System.out.println("\n=== Sistema de Gestão de Biblioteca (GoF) ===");
                     System.out.println("1 - Executar fluxo completo de demonstração");
-                    System.out.println("2 - Cadastrar Pessoa, Estudante e Livro");
+                    System.out.println("2 - Manter cadastros (Pessoa, Estudante, Atendente e Livro)");
                     System.out.println("3 - Reservar Livro");
                     System.out.println("4 - Efetivar Empréstimo");
                     System.out.println("5 - Renovar Empréstimo");
@@ -87,16 +88,75 @@ public class ConsoleApp {
                         switch (op) {
                             case "1" -> main(new String[]{"demo", "memoria", banco});
                             case "2" -> {
-                                System.out.print("CPF: "); String cpf = sc.nextLine().trim();
-                                System.out.print("Nome: "); String nome = sc.nextLine().trim();
-                                System.out.print("Sobrenome: "); String sob = sc.nextLine().trim();
-                                cadPessoa.inserirPessoa(nome, sob, cpf);
-                                System.out.print("ID Estudante: "); int idEst = Integer.parseInt(sc.nextLine().trim());
-                                System.out.print("Matrícula: "); String mat = sc.nextLine().trim();
-                                cadEstudante.inserirEstudante(cpf, idEst, mat);
-                                System.out.print("ID Livro: "); int idLiv = Integer.parseInt(sc.nextLine().trim());
-                                System.out.print("Título: "); String tit = sc.nextLine().trim();
-                                System.out.println("Cadastrado: " + cadLivro.inserirLivro(idLiv, tit));
+                                System.out.print("Cadastro: 1 - Pessoa | 2 - Estudante | 3 - Atendente | 4 - Livro: ");
+                                String entidade = sc.nextLine().trim();
+                                System.out.print("Operação: 1 - Inserir | 2 - Consultar | 3 - Atualizar | 4 - Excluir: ");
+                                String acao = sc.nextLine().trim();
+                                switch (entidade + acao) {
+                                    case "11", "13" -> {
+                                        System.out.print("CPF: "); String cpf = sc.nextLine().trim();
+                                        System.out.print("Nome: "); String nome = sc.nextLine().trim();
+                                        System.out.print("Sobrenome: "); String sob = sc.nextLine().trim();
+                                        System.out.println("11".equals(entidade + acao)
+                                                ? "Cadastrado: " + cadPessoa.inserirPessoa(nome, sob, cpf)
+                                                : "Atualizado: " + cadPessoa.atualizarPessoa(cpf, nome, sob));
+                                    }
+                                    case "12" -> {
+                                        System.out.print("CPF: ");
+                                        System.out.println(cadPessoa.consultarPessoa(sc.nextLine().trim()).map(Object::toString).orElse("Pessoa não encontrada"));
+                                    }
+                                    case "14" -> {
+                                        System.out.print("CPF: ");
+                                        System.out.println(cadPessoa.excluirPessoa(sc.nextLine().trim()) ? "Pessoa excluída" : "Pessoa não encontrada");
+                                    }
+                                    case "21", "23" -> {
+                                        System.out.print("ID Estudante: "); int idEst = Integer.parseInt(sc.nextLine().trim());
+                                        System.out.print("CPF (Pessoa já cadastrada): "); String cpf = sc.nextLine().trim();
+                                        System.out.print("Matrícula: "); String mat = sc.nextLine().trim();
+                                        System.out.println("21".equals(entidade + acao)
+                                                ? "Cadastrado: " + cadEstudante.inserirEstudante(cpf, idEst, mat)
+                                                : "Atualizado: " + cadEstudante.atualizarEstudante(idEst, cpf, mat));
+                                    }
+                                    case "22" -> {
+                                        System.out.print("ID Estudante: ");
+                                        System.out.println(cadEstudante.consultarEstudante(Integer.parseInt(sc.nextLine().trim())).map(Object::toString).orElse("Estudante não encontrado"));
+                                    }
+                                    case "24" -> {
+                                        System.out.print("ID Estudante: ");
+                                        System.out.println(cadEstudante.excluirEstudante(Integer.parseInt(sc.nextLine().trim())) ? "Estudante excluído" : "Estudante não encontrado");
+                                    }
+                                    case "31", "33" -> {
+                                        System.out.print("ID Atendente: "); int idAte = Integer.parseInt(sc.nextLine().trim());
+                                        System.out.print("CPF (Pessoa já cadastrada): "); String cpf = sc.nextLine().trim();
+                                        System.out.println("31".equals(entidade + acao)
+                                                ? "Cadastrado: " + cadAtendente.inserirAtendente(cpf, idAte)
+                                                : "Atualizado: " + cadAtendente.atualizarAtendente(idAte, cpf));
+                                    }
+                                    case "32" -> {
+                                        System.out.print("ID Atendente: ");
+                                        System.out.println(cadAtendente.consultarAtendente(Integer.parseInt(sc.nextLine().trim())).map(Object::toString).orElse("Atendente não encontrado"));
+                                    }
+                                    case "34" -> {
+                                        System.out.print("ID Atendente: ");
+                                        System.out.println(cadAtendente.excluirAtendente(Integer.parseInt(sc.nextLine().trim())) ? "Atendente excluído" : "Atendente não encontrado");
+                                    }
+                                    case "41", "43" -> {
+                                        System.out.print("ID Livro: "); int idLiv = Integer.parseInt(sc.nextLine().trim());
+                                        System.out.print("Título: "); String tit = sc.nextLine().trim();
+                                        System.out.println("41".equals(entidade + acao)
+                                                ? "Cadastrado: " + cadLivro.inserirLivro(idLiv, tit)
+                                                : "Atualizado: " + cadLivro.atualizarLivro(idLiv, tit));
+                                    }
+                                    case "42" -> {
+                                        System.out.print("ID Livro: ");
+                                        System.out.println(cadLivro.consultarLivro(Integer.parseInt(sc.nextLine().trim())).map(Object::toString).orElse("Livro não encontrado"));
+                                    }
+                                    case "44" -> {
+                                        System.out.print("ID Livro: ");
+                                        System.out.println(cadLivro.excluirLivro(Integer.parseInt(sc.nextLine().trim())) ? "Livro excluído" : "Exclusão recusada ou livro não encontrado");
+                                    }
+                                    default -> System.out.println("Opção de cadastro inválida.");
+                                }
                             }
                             case "3" -> {
                                 System.out.print("ID Livro: "); int idLiv = Integer.parseInt(sc.nextLine().trim());
